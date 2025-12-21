@@ -76,3 +76,7 @@ local files/paths **by design**.
 ```bash
 pip install -r requirements.txt
 python main.py
+
+## License
+MIT License.  
+This project uses PySide6, which is licensed under the LGPL v3.
