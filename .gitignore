@@ -1,0 +1,45 @@
+# =====================
+# Python
+# =====================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# =====================
+# Virtual environments
+# =====================
+venv/
+.venv/
+
+# =====================
+# OS / Editor
+# =====================
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# =====================
+# Local runtime data (NO versionar)
+# =====================
+app/data/JSON/files.json
+app/data/JSON/toolbar.json
+app/data/JSON/tasks.json
+app/data/JSON/tasks_archive.csv
+
+app/data/input_CSV/
+app/data/input_CSV_archive/
+app/data/CSV/
+
+# =====================
+# Logs / temporales
+# =====================
+*.log
+*.tmp
+
+# =====================
+# Opcional
+# =====================
+TODO.md
+

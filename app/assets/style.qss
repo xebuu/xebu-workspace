@@ -1,0 +1,264 @@
+/* ===========================
+   GENERAL BUTTONS
+=========================== */
+
+QPushButton {
+    color: #fff;
+    background: #2d2d2d;
+    border: 0.5px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    text-align: left;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+QPushButton:hover {
+    background: #565555;
+}
+
+QPushButton:checked {
+    background: #383838;
+}
+
+
+/* ===========================
+   TOGGLE BUTTON
+=========================== */
+
+#ToggleBtn {
+    font-weight: bold;
+    background: #2d2d2d;
+    color: #fff;
+}
+
+
+/* ===========================
+   STATUS BAR
+=========================== */
+
+QStatusBar {
+    background: #2d2d2d;
+    color: #EFEDE1;
+}
+
+
+/* ===========================
+   STACKED WIDGET
+=========================== */
+
+QStackedWidget {
+    background: #2d2d2d;
+}
+
+
+/* ===========================
+   SIDEBAR
+=========================== */
+
+#SideBar {
+    background: #565555;
+    border-right: 8px solid #EFEDE1;
+}
+
+
+/* ===========================
+   TITLES & LABELS
+=========================== */
+
+QLabel#Title {
+    color: #EFEDE1;
+    font-size: 20px;
+    font-weight: 800;
+}
+
+QLabel#CardTitle {
+    color: #EFEDE1;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+QLabel#CardMeta {
+    color: #bfc8c8;
+    font-size: 12px;
+}
+
+QLabel#RunTitle {
+    color: #EFEDE1;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+QLabel {
+    color: #EFEDE1;
+    font-weight: 600;
+}
+
+
+/* ===========================
+   CARD FRAMES
+=========================== */
+
+QFrame#Card {
+    background: #253532;
+    border: 1px solid #253532;
+    border-radius: 12px;
+}
+
+QFrame#Card:hover {
+    background: #2e4541;
+    border: 1px solid #2e4541;
+}
+
+
+/* ===========================
+   SPECIAL BUTTONS
+=========================== */
+
+QPushButton#Open {
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-weight: 600;
+    background: #253532;
+    color: white;
+    border: 1px solid #253532;
+}
+
+QPushButton#Open:hover {
+    background: #1d4ed8;
+}
+
+QPushButton#Edit {
+    background: #253532;
+    color: #f3f4f6;
+    border: 1px solid #253532;
+}
+
+QPushButton#Edit:hover {
+    background: #818b9b;
+}
+
+QPushButton#Delete {
+    background: #253532;
+    color: white;
+    border: 1px solid #253532;
+}
+
+QPushButton#Delete:hover {
+    background: #ff4e4e;
+}
+
+QPushButton#Run {
+    background: #2563eb;
+    color: white;
+    border: 1px solid #1d4ed8;
+}
+
+QPushButton#Run:hover {
+    background: #1d4ed8;
+}
+
+QPushButton#BtnOk {
+    background:#2563eb; border:1px solid #1d4ed8; color:white;
+    font-weight:800;
+}
+QPushButton#BtnOk:hover { background:#1d4ed8; }
+QPushButton#BtnDel {
+    background:#b45353; border:1px solid #9f3939; color:#ffefef; font-weight:800;
+}
+QPushButton#BtnDel:hover { background:#a84444; }
+QPushButton#BtnArc {
+    background:#6EB4C0; border:1px solid #4f99a6; color:#0b2226; font-weight:800;
+}
+QPushButton#BtnArc:hover { background:#52C5DA; }
+
+
+/* ===========================
+   DIALOGS & INPUTS
+=========================== */
+
+QDialog {
+    background: #1b2224;
+}
+
+QLineEdit,
+QTextEdit,
+QListWidget {
+    background: #1D2927;
+    color: #EFEDE1;
+    border: 1px solid #2e3b3f;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+
+QListWidget::item:selected {
+    background: #3a4a47;
+    border-radius: 6px;
+}
+
+QListWidget::item:hover {
+    background: #3b5f4d;
+    border-radius: 6px;
+}
+
+QTextEdit {
+    background: #1D2927;
+    color: #EFEDE1;
+    border: 1px solid #2e3b3f;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+
+QLineEdit, QComboBox {
+    background:#1D2927; color:#EFEDE1;
+    border:1px solid #2e3b3f; border-radius:8px; padding:6px 8px;
+}
+QCheckBox { color:#EFEDE1; }
+
+QPushButton {
+    border-radius:8px; padding:8px 12px; font-weight:700;
+    color:#EFEDE1; background:#253532; border:1px solid #2e3b3f;
+}
+QPushButton:hover { background:#2b3d39; }
+
+
+QScrollArea { border: 1px solid #2e3b3f; border-radius: 10px; }
+QWidget#TaskRow {
+    background:#253532; border:1px solid #2e3b3f; border-radius:10px;
+}
+QLabel#TaskLabel { color:#EFEDE1; }
+
+/* ===========================
+   DEADLINE DATE EDIT
+=========================== */
+
+QDateEdit {
+    background: #1D2927;
+    color: #EFEDE1;
+    border: 1px solid #2e3b3f;
+    border-radius: 8px;
+    padding: 6px 8px;
+    min-width: 120px;
+}
+
+/* Cuando está en foco */
+QDateEdit:focus {
+    border: 1px solid #2563eb;
+}
+
+/* ===========================
+   DEADLINE CALENDAR POPUP
+=========================== */
+
+QCalendarWidget QWidget#qt_calendar_navigationbar {
+    background: #253532;   /* VERDE OSCURO */
+    border-bottom: 1px solid #2e3b3f;}
+
+/* Texto del nombre del mes */
+QCalendarWidget QToolButton {
+    background: transparent;
+    color: #EFEDE1;  
+    font-weight: 700;
+    border: none;}
+
