@@ -1,6 +1,7 @@
 # seg_processing_manager.py
 from __future__ import annotations
 import sys, os, json, uuid, subprocess, webbrowser
+from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, asdict, field
 from typing import Optional, List
@@ -13,7 +14,7 @@ from PySide6.QtWidgets import (
     QMenu
 )
 from app.utility.paths import FILES_JSON
-
+from app.windows.w_archived_projects import ArchivedProjectWindow
 
 def _ensure_files_json():
     FILES_JSON.parent.mkdir(parents=True, exist_ok=True)
@@ -134,6 +135,10 @@ class ProcessManagerWindow(QMainWindow):
         header.addWidget(title)
         header.addItem(QSpacerItem(10,10,QSizePolicy.Expanding,QSizePolicy.Minimum))
 
+        self.btn_archived = QPushButton("Archivados")
+        self.btn_archived.clicked.connect(self._open_archived_projects)
+        header.addWidget(self.btn_archived)
+
         self.btn_add = QPushButton("+ Nuevo Proyecto")
         self.btn_add.clicked.connect(self._open_builder_new)
         header.addWidget(self.btn_add)
@@ -161,7 +166,15 @@ class ProcessManagerWindow(QMainWindow):
             if w is not None:
                 w.deleteLater()
 
-        processes = [ProcessDef.from_dict(p) for p in self.db.get("processes", [])]
+                # ✅ Only render non-archived processes
+        raw_procs = self.db.get("processes", [])
+        raw_procs = [
+            p for p in raw_procs
+            if isinstance(p, dict) and p.get("is_archived") is not True
+        ]
+
+        processes = [ProcessDef.from_dict(p) for p in raw_procs]
+
         if not processes:
             lbl = QLabel("No hay procesos aún. Usa “Agregar proceso”.")
             self.grid.addWidget(lbl, 0,0, alignment=Qt.AlignTop)
@@ -198,6 +211,7 @@ class ProcessManagerWindow(QMainWindow):
                 menu = QMenu(card)
                 act_edit = menu.addAction("Editar")
                 act_del = menu.addAction("Borrar")
+                act_archive_proc = menu.addAction("Archivar")
 
                 global_pos = card.mapToGlobal(event.position().toPoint())
                 action = menu.exec(global_pos)
@@ -206,6 +220,8 @@ class ProcessManagerWindow(QMainWindow):
                     parent._open_builder_edit(proc)
                 elif action == act_del:
                     parent._delete_process(proc.id)
+                elif action == act_archive_proc:
+                    parent._archive_process(proc.id)
 
         card.mousePressEvent = _on_card_click
         card.setCursor(Qt.PointingHandCursor)
@@ -257,7 +273,45 @@ class ProcessManagerWindow(QMainWindow):
         _save_db(self.db)
         self._render()
 
+    def _archive_process(self, proc_id: str):
+        if QMessageBox.question(
+            self, "Archivar proceso",
+            "¿Seguro que quieres archivar este proceso?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        ) != QMessageBox.Yes:
+            return
 
+        procs = self.db.get("processes", [])
+        now_iso = datetime.now().isoformat(timespec="seconds")
+
+        updated = False
+        for p in procs:
+            if p.get("id") == proc_id:
+                p["is_archived"] = True
+                p["achived_at"] = now_iso
+                updated = True
+                break
+
+        self.db["processes"] = procs
+        _save_db(self.db)
+        self._render()
+    
+    def _open_archived_projects(self):    
+        def on_unarchived(proc_id: str):
+            # mutate + persist using your existing patterns
+            procs = self.db.get("processes", [])
+            for p in procs:
+                if p.get("id") == proc_id:
+                    p["is_archived"] = False
+                    p["archived_at"] = None
+                    break
+            self.db["processes"] = procs
+            _save_db(self.db)
+            self._render()
+
+        self._archived_win = ArchivedProjectWindow(self.db, on_unarchived=on_unarchived, parent=self)
+        self._archived_win.show()
 # -------------------- Builder (minimal): create/edit process --------------------
 class ProcessBuilderWindow(QDialog):
     """
