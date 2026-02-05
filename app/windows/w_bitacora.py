@@ -77,6 +77,6 @@ class BitacoraWindow(QMainWindow):
     def _open_csv(self):
         p = self.csv_path
         try:
-            os.startfile(str(p))
+            os.startfile(str(p.resolve()))
         except Exception as e:
             QMessageBox.warning(self, "Bitácora", str(e))
