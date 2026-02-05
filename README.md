@@ -10,7 +10,7 @@ Features, structure, and data formats may change at any time.
 
 ---
 
-## ⚙️ Features
+## Features
 
 - **Process Manager**
   - Run local Python scripts
@@ -33,7 +33,7 @@ Features, structure, and data formats may change at any time.
 
 ---
 
-## 🧠 Philosophy
+## Philosophy
 
 XebuWorkspace is intentionally **local-first**:
 - No cloud
@@ -57,13 +57,23 @@ local files/paths **by design**.
 
 ---
 
-## 🧪 Alpha Limitations
+## Current Limitations
 
 - No installer (run from source)
 - Limited error handling
 - No backward compatibility guarantees for local data
 - UI and APIs may change without notice
 
+---
+
+## Future updates
+
+**Update 1.1** | (to be released around March 2026)
+- Currently developing a color selection feature 
+- Improving the Process Manager UI 
+
+**Further ahead**
+- Developing a Calendar UI for Managing tasks Visually
 ---
 
 ## 🛠️ Installation
