@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import json, csv, datetime
+import json, csv, datetime, uuid
 from typing import Any, Dict, List, Tuple
 
-from app.utility.paths import ACTIVE_TASKS_JSON, ARCHIVED_TASKS_CSV, BITACORA_CSV
+from app.utility.paths import (ACTIVE_TASKS_JSON, ARCHIVED_TASKS_CSV, 
+                               BITACORA_CSV, FILES_JSON)
 
 
 class TasksRepo:
@@ -96,3 +97,60 @@ class BitacoraRepo:
     def path(self):
         self.ensure_headers
         return BITACORA_CSV 
+
+class ProjectsRepo:
+    """Processes/projects database stored in FILES_JSON."""
+
+    def ensure(self) -> None:
+        FILES_JSON.parent.mkdir(parents=True, exist_ok=True)
+        if not FILES_JSON.exists():
+            FILES_JSON.write_text(
+                json.dumps({"processes": [], "tasks": []}, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+    def load(self) -> Dict[str, Any]:
+        self.ensure()
+        try:
+            data = json.loads(FILES_JSON.read_text(encoding="utf-8")) or {}
+        except Exception:
+            data = {}
+
+        # === Load Processes ===
+        data.setdefault("processes", [])
+        changed = False
+        for p in data["processes"]:
+            if isinstance(p, dict) and "id" not in p:
+                p["id"] = str(uuid.uuid4())
+                changed = True
+            if isinstance(p, dict):
+                p.setdefault("name", "Sin nombre")
+                p.setdefault("description", "")
+                p.setdefault("scripts", [])
+                p.setdefault("links", [])
+                p.setdefault("copiers", [])
+
+        # === Load Tasks ===
+        data.setdefault("tasks", [])
+        for t in data["tasks"]:
+            if not isinstance(t, dict):
+                continue
+            t.setdefault("tarea", "Sin título")
+            t.setdefault("completado", False)
+            t.setdefault("diaria", False)
+            t.setdefault("ultima_actualizacion", "")
+            t.setdefault("deadline", "")
+            t.setdefault("prioridad", "media")
+            t.setdefault("proc_id", None)
+
+        if changed:
+            self.save(data)
+
+        return data
+
+    def save(self, obj: Dict[str, Any]) -> None:
+        self.ensure()
+        FILES_JSON.write_text(
+            json.dumps(obj, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )

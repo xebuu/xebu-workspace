@@ -1,64 +1,21 @@
 # seg_processing_manager.py
 from __future__ import annotations
-import sys, os, json, uuid, subprocess, webbrowser
+import sys, os, uuid, subprocess, webbrowser
 from datetime import datetime
 from pathlib import Path
 from dataclasses import dataclass, asdict, field
 from typing import Optional, List
-from PySide6.QtGui import QKeySequence, QShortcut, QIcon
-from PySide6.QtCore import Qt,QSize, QTimer
+from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QFrame, QGridLayout, QLineEdit, QTextEdit, QFileDialog, QMessageBox,
     QSizePolicy, QSpacerItem, QDialog, QDialogButtonBox, QListWidget, QListWidgetItem,
     QMenu
 )
-from app.utility.paths import FILES_JSON
 from app.windows.w_archived_projects import ArchivedProjectWindow
 
-def _ensure_files_json():
-    FILES_JSON.parent.mkdir(parents=True, exist_ok=True)
-    if not FILES_JSON.exists():
-        FILES_JSON.write_text(json.dumps({"processes": []}, indent=2, ensure_ascii=False), encoding="utf-8")
-
-def _load_db() -> dict:
-    _ensure_files_json()
-    try:
-        data = json.loads(FILES_JSON.read_text(encoding="utf-8")) or {}
-    except Exception:
-        data = {}
-
-    # === Load Processes ===
-    data.setdefault("processes", [])
-    changed = False
-    for p in data["processes"]:
-        if "id" not in p:
-            p["id"] = str(uuid.uuid4()); changed = True
-        p.setdefault("name", "Sin nombre")
-        p.setdefault("description", "")
-        p.setdefault("scripts", [])
-        p.setdefault("links", [])
-        p.setdefault("copiers", [])
-
-    # === Load Tasks ===
-    data.setdefault("tasks", [])
-    for t in data["tasks"]:
-
-        t.setdefault("tarea", "Sin título")
-        t.setdefault("completado", False)
-        t.setdefault("diaria", False)
-        t.setdefault("ultima_actualizacion", "")
-        t.setdefault("deadline", "")
-        t.setdefault("prioridad", "media")
-        t.setdefault("proc_id", None)
-
-    if changed:
-        _save_db(data)
-    return data
-
-def _save_db(obj: dict):
-    FILES_JSON.write_text(json.dumps(obj, indent=2, ensure_ascii=False), encoding="utf-8")
-
+from app.utility.database import ProjectsRepo
 
 # -------------------- Data classes --------------------
 @dataclass
@@ -122,7 +79,9 @@ class ProcessManagerWindow(QMainWindow):
         super().__init__(parent)
         self.setWindowTitle("Gestión de Proyectos")
         self.resize(1000, 640)
-        self.db = _load_db()
+        self.projects_repo = ProjectsRepo()
+        self.db = self.projects_repo.load()
+        #self.db = _load_db()
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -246,7 +205,7 @@ class ProcessManagerWindow(QMainWindow):
         if dlg.exec() == QDialog.Accepted:
             new_proc = dlg.result_process()
             self.db["processes"].append(new_proc.to_dict())
-            _save_db(self.db)
+            self.projects_repo.save(self.db)
             self._render()
 
     def _open_builder_edit(self, proc: ProcessDef):
@@ -257,7 +216,7 @@ class ProcessManagerWindow(QMainWindow):
                 if p["id"] == updated.id:
                     self.db["processes"][i] = updated.to_dict()
                     break
-            _save_db(self.db)
+            self.projects_repo.save(self.db)
             self._render()
     
     def _delete_process(self, proc_id: str):
@@ -270,7 +229,7 @@ class ProcessManagerWindow(QMainWindow):
         procs = self.db.get("processes", [])
         procs = [p for p in procs if p.get("id") != proc_id]
         self.db["processes"] = procs
-        _save_db(self.db)
+        self.projects_repo.save(self.db)
         self._render()
 
     def _archive_process(self, proc_id: str):
@@ -294,7 +253,7 @@ class ProcessManagerWindow(QMainWindow):
                 break
 
         self.db["processes"] = procs
-        _save_db(self.db)
+        self.projects_repo.save(self.db)
         self._render()
     
     def _open_archived_projects(self):    
@@ -307,7 +266,7 @@ class ProcessManagerWindow(QMainWindow):
                     p["archived_at"] = None
                     break
             self.db["processes"] = procs
-            _save_db(self.db)
+            self.projects_repo.save(self.db)
             self._render()
 
         self._archived_win = ArchivedProjectWindow(self.db, on_unarchived=on_unarchived, parent=self)
