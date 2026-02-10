@@ -216,13 +216,6 @@ QLineEdit, QComboBox {
 }
 QCheckBox { color:#EFEDE1; }
 
-QPushButton {
-    border-radius:8px; padding:8px 12px; font-weight:700;
-    color:#EFEDE1; background:#253532; border:1px solid #2e3b3f;
-}
-QPushButton:hover { background:#2b3d39; }
-
-
 QScrollArea { border: 1px solid #2e3b3f; border-radius: 10px; }
 QWidget#TaskRow {
     background:#253532; border:1px solid #2e3b3f; border-radius:10px;
