@@ -1,7 +1,6 @@
 # tabs/w_tasks.py
 from __future__ import annotations
-import json, csv, datetime, sys
-from pathlib import Path
+import datetime, sys
 
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QKeySequence, QAction
@@ -10,25 +9,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QComboBox, QCheckBox, QMessageBox, QScrollArea, QFrame, 
     QApplication, QDateEdit)
 
-from app.utility.paths import ARCHIVED_TASKS_CSV, ACTIVE_TASKS_JSON
-
-# ---------------- Storage ----------------
-def _load_tasks() -> list[dict]:
-    p = ACTIVE_TASKS_JSON
-    if not p.exists():
-        p.write_text("[]", encoding="utf-8")
-        return []
-    try:
-        data = json.loads(p.read_text(encoding="utf-8")) or []
-        if not isinstance(data, list):
-            return []
-        return data
-    except Exception:
-        return []
-
-def _save_tasks(tasks: list[dict]):
-    p = ACTIVE_TASKS_JSON
-    p.write_text(json.dumps(tasks, indent=2, ensure_ascii=False), encoding="utf-8")
+from app.utility.database import TasksRepo, ArchivedTasksRepo
 
 # ---------------- Widgets ----------------
 class _TaskRow(QFrame):
@@ -97,15 +78,17 @@ class _TaskRow(QFrame):
 
         return f"{estado} {texto}{dias_restantes}{dTxt} {icono}"
 
-
 class TasksWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("📋 Gestor de Tareas")
         self.resize(940, 600)
 
-        self.tasks = _load_tasks()
-        self._reset_diarias_if_needed()
+        self.tasks_repo = TasksRepo()
+        self.arch_repo = ArchivedTasksRepo()
+
+        self.tasks = self.tasks_repo.load()
+        self.tasks_repo.reset_daily_if_needed(self.tasks)
 
         central = QWidget(self); self.setCentralWidget(central)
         root = QVBoxLayout(central); root.setContentsMargins(16,16,16,16); root.setSpacing(12)
@@ -165,18 +148,6 @@ class TasksWindow(QMainWindow):
         container_layout.addLayout(left, 1)
         container_layout.addLayout(right, 1)
 
-    # ---------- Data logic ----------
-    def _reset_diarias_if_needed(self):
-        hoy = datetime.date.today()
-        changed = False
-        for t in self.tasks:
-            if t.get("diaria") and t.get("ultima_actualizacion") != str(hoy):
-                t["completado"] = False
-                t["ultima_actualizacion"] = str(hoy)
-                changed = True
-        if changed:
-            _save_tasks(self.tasks)
-
     def _add_task(self):
         text = self.edt_new.text().strip()
         deadline_str = self.edt_deadline.date().toString("yyyy-MM-dd")
@@ -191,7 +162,7 @@ class TasksWindow(QMainWindow):
             "prioridad": (self.cmb_prio.currentText() or "media").lower()
         }
         self.tasks.append(new_task)
-        _save_tasks(self.tasks)
+        self.tasks_repo.save(self.tasks)
 
         # limpiar entradas
         self.edt_new.clear()
@@ -203,35 +174,19 @@ class TasksWindow(QMainWindow):
 
     def _toggle_task(self, task: dict):
         task["completado"] = not task.get("completado", False)
-        _save_tasks(self.tasks)
+        self.tasks_repo.save(self.tasks)
         self._render()
 
     def _delete_task(self, task: dict):
         self.tasks = [t for t in self.tasks if t is not task]
-        _save_tasks(self.tasks)
+        self.tasks_repo.save(self.tasks)
         self._render()
 
     def _archive_task(self, task: dict):
-        # append to CSV then delete
-        p = ARCHIVED_TASKS_CSV
-        newfile = not p.exists()
-        try:
-            with p.open("a", newline="", encoding="utf-8") as f:
-                w = csv.writer(f)
-                if newfile:
-                    w.writerow(["Tarea", "Completado", "Diaria", "Última actualización", "Deadline", "Prioridad"])
-                w.writerow([
-                    task.get("tarea", ""),
-                    task.get("completado", False),
-                    task.get("diaria", False),
-                    task.get("ultima_actualizacion", ""),
-                    task.get("deadline", ""),
-                    task.get("prioridad", ""),
-                ])
-        except Exception as e:
-            QMessageBox.warning(self, "Archivar", f"No se pudo escribir CSV:\n{e}")
+        ok, err = self.arch_repo.append_task(task)
+        if not ok:
+            QMessageBox.warning(self, "Archivar", f"No se pudo escribir CSV:\n{err}")
             return
-
         self._delete_task(task)
 
     # ---------- Render ----------
