@@ -1,12 +1,12 @@
 # app/main.py
-import sys, json, webbrowser, os, uuid
+import sys, webbrowser, os, uuid
 from time import perf_counter
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer, QSize
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QStackedWidget, QSizePolicy, QFrame, QToolBar,  QMenu, QMenuBar,  QSizePolicy,
+    QStackedWidget, QSizePolicy, QFrame, QToolBar,  QMenu,  QSizePolicy,
     QLineEdit, QDialogButtonBox, QLabel,QMessageBox,QFileDialog, QDialog, QToolButton,
     QInputDialog)
 
@@ -17,33 +17,8 @@ from app.tabs.tab_projects import ProjectManagerTab
 from app.windows.w_bitacora import BitacoraWindow
 from app.windows.w_tasks import TasksWindow
 from app.utility.helpers import show_loading_then
-from app.utility.paths import assets_path,assets_path_yellow,TOOLBAR_JSON
-
-def _ensure_toolbar_db():
-    TOOLBAR_JSON.parent.mkdir(parents=True, exist_ok=True)
-    if not TOOLBAR_JSON.exists():
-        TOOLBAR_JSON.write_text(json.dumps({"items": []}, indent=2, ensure_ascii=False), encoding="utf-8")
-
-def _load_toolbar_db() -> dict:
-    _ensure_toolbar_db()
-    try:
-        data = json.loads(TOOLBAR_JSON.read_text(encoding="utf-8")) or {}
-    except Exception:
-        data = {}
-    data.setdefault("items", [])
-    # backfill
-    changed = False
-    for it in data["items"]:
-        if "id" not in it:
-            it["id"] = str(uuid.uuid4()); changed = True
-        it.setdefault("title", "Acceso")
-        it.setdefault("target", "")
-    if changed:
-        _save_toolbar_db(data)
-    return data
-
-def _save_toolbar_db(data: dict):
-    TOOLBAR_JSON.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+from app.utility.paths import assets_path,assets_path_yellow
+from app.utility.database import MainWindowToolbarRepo
 
 def _open_target(target: str):
     try:
@@ -243,8 +218,9 @@ class MainWindow(QMainWindow):
         tb.setMovable(True)
         tb.setFloatable(True)
 
-        # ---- carga items existentes ----
-        self._toolbar_db = _load_toolbar_db()
+        # ---- carga items existentes --
+        self.toolbar_repo = MainWindowToolbarRepo()
+        self._toolbar_db = self.toolbar_repo.load()
         self._toolbar_buttons: dict[str, QAction] = {}  # id -> action
 
         # Botón  (agregar acceso)
@@ -322,9 +298,9 @@ class MainWindow(QMainWindow):
         item = dlg.result_item()
 
         # persiste
-        db = self._toolbar_db or _load_toolbar_db()
+        db = self._toolbar_db or self.toolbar_repo.load()
         db["items"].append(item)
-        _save_toolbar_db(db)
+        self.toolbar_repo.save(db)
         self._toolbar_db = db
 
         # crea botón en runtime (antes del spacer)
@@ -343,7 +319,7 @@ class MainWindow(QMainWindow):
     
     def _toolbar_edit_item(self, item_id: str):
         # 1) Cargar DB (caché o disco)
-        db = self._toolbar_db or _load_toolbar_db()
+        db = self._toolbar_db or self.toolbar_repo.load()
         items = db.get("items",[])
 
         # 2) Buscar item
@@ -387,7 +363,7 @@ class MainWindow(QMainWindow):
 
         # 5) Guardar JSON (ajusta al nombre de tu función de guardado)
         self._toolbar_db = db
-        _save_toolbar_db(self._toolbar_db)
+        self.toolbar_repo.save(db)
         
         # 6) Actualizar la QAction ya existente en la barra
         act = self._toolbar_buttons.get(item_id)
@@ -416,9 +392,9 @@ class MainWindow(QMainWindow):
             return
 
         # quita de la DB
-        db = self._toolbar_db or _load_toolbar_db()
+        db = self._toolbar_db or self.toolbar_repo.load()
         db["items"] = [it for it in db.get("items", []) if it.get("id") != item_id]
-        _save_toolbar_db(db)
+        self.toolbar_repo.save(db)
         self._toolbar_db = db
 
         # reconstruir toolbar (más simple/robusto que buscar y eliminar widget por widget)
