@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
 
 # Vista interna
-from app.tabs.tab_processing import ProcessManagerWindow
+from app.tabs.tab_projects import ProjectManagerTab
 from app.windows.w_bitacora import BitacoraWindow
 from app.windows.w_tasks import TasksWindow
 from app.utility.helpers import show_loading_then
@@ -203,7 +203,7 @@ class MainWindow(QMainWindow):
         t0 = perf_counter()
         if self.pages[idx] is None:
             if idx == 0:
-                page = ProcessManagerWindow()
+                page = ProjectManagerTab()
             elif idx == 1:
                 page = self.tab_temporal("Coming Soon")
             else:
