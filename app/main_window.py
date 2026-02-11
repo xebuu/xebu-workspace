@@ -81,8 +81,6 @@ class AddToolbarShortcutDialog(QDialog):
             "target": self.edt_target.text().strip(),
         }
 
-###
-
 
 # ========= Sidebar =========
 class SideBar(QWidget):
@@ -109,7 +107,7 @@ class SideBar(QWidget):
 
         self.buttons = []
         tabs = [
-            ("⚙️  Procesamiento", 0),
+            ("📝  Proyectos", 0),
             ("🛰️  Coming Soon", 1),
         ]
         for text, idx in tabs:
@@ -157,7 +155,7 @@ class MainWindow(QMainWindow):
         hbox.setSpacing(0)
 
         self.stack = QStackedWidget()
-        self.pages = [None, None]  # 0=Proc, 1=Map, 2=Acc, 3=Bridges
+        self.pages = [None, None]  
 
         self.sidebar = SideBar(on_tab_selected=self.show_tab)
         hbox.addWidget(self.sidebar)
@@ -194,7 +192,6 @@ class MainWindow(QMainWindow):
 
     def _build_menubar(self):
         mb = self.menuBar()
-        # ---- estilo oscuro para menús ----
 
         # --- Menú Archivo ---
         menu_file = mb.addMenu("Archivo")
@@ -441,8 +438,6 @@ class MainWindow(QMainWindow):
 
 def build_main():
     return MainWindow()
-
-
 
 def run():
     app = QApplication(sys.argv)
