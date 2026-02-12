@@ -14,6 +14,8 @@ from app.windows.w_project_editor import ProjectEditorWindow
 from app.utility.database import ProjectsRepo
 from app.models.project_models import ProcessDef
 
+from app.widgets.search_bars import ProjectSearchBar
+
 # -------------------- Main: Manager window --------------------
 class ProjectManagerTab(QMainWindow):
     def __init__(self, parent=None):
