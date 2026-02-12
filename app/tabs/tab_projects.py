@@ -39,7 +39,8 @@ class ProjectManagerTab(QMainWindow):
         header.addItem(QSpacerItem(10,10,QSizePolicy.Expanding,QSizePolicy.Minimum))
 
         self.searchbar = ProjectSearchBar()
-        self.searchbar.setFixedWidth(600)  # optional
+        self.searchbar.setFixedWidth(600)
+        self.searchbar.textChanged.connect(self._on_search_changed)
         header.addWidget(self.searchbar)
 
         self.btn_archived = QPushButton("Archivados")
@@ -65,7 +66,7 @@ class ProjectManagerTab(QMainWindow):
         self._render()
 
 
-    def _render(self):
+    def _render(self, data=None, query:str = ""):
         # limpiar
         while self.grid.count():
             item = self.grid.takeAt(0)
@@ -73,17 +74,24 @@ class ProjectManagerTab(QMainWindow):
             if w is not None:
                 w.deleteLater()
 
-                # ✅ Only render non-archived processes
-        raw_procs = self.db.get("processes", [])
-        raw_procs = [
-            p for p in raw_procs
+        # Only render non-archived Projects
+        raw_projs = self.db.get("processes", [])
+        active_projs = [
+            p for p in raw_projs
             if isinstance(p, dict) and p.get("is_archived") is not True
-        ]
+                        ]
 
-        processes = [ProcessDef.from_dict(p) for p in raw_procs]
+        if data is None:
+            processes = [ProcessDef.from_dict(p) for p in active_projs]
+        else:   
+            processes = [ProcessDef.from_dict(p) for p in data]
 
         if not processes:
-            lbl = QLabel("No hay procesos aún. Usa “Agregar proceso”.")
+            if query == "":
+                lbl = QLabel("No hay proyectos aún. Usa “Agregar Proyecto”.")
+            else:
+                lbl = QLabel(f"No hay resultados para {query}.")
+                
             self.grid.addWidget(lbl, 0,0, alignment=Qt.AlignTop)
             return
 
@@ -219,3 +227,26 @@ class ProjectManagerTab(QMainWindow):
 
         self._archived_win = ArchivedProjectWindow(self.db, on_unarchived=on_unarchived, parent=self)
         self._archived_win.show()
+
+    def _on_search_changed(self, text: str):
+        text = (text or "").strip().lower()
+
+        raw_projs = self.db.get("processes", [])
+        active_projs = [
+            p for p in raw_projs
+            if isinstance(p, dict) and p.get("is_archived") is not True
+        ]
+
+        if not text:
+            return self._render(None)  # show all active
+
+        def field(d: dict, key: str) -> str:
+            v = d.get(key, "")
+            return (v or "").lower() if isinstance(v, str) else str(v).lower()
+
+        filtered = [
+            p for p in active_projs
+            if text in field(p, "name") or text in field(p, "title")
+        ]
+
+        self._render(filtered, query=text)
