@@ -33,9 +33,14 @@ class ProjectManagerTab(QMainWindow):
         root.setSpacing(10)
 
         header = QHBoxLayout()
-        title = QLabel("Proyectos"); title.setObjectName("Title")
+        title = QLabel("Proyectos"); 
+        title.setObjectName("Title")
         header.addWidget(title)
         header.addItem(QSpacerItem(10,10,QSizePolicy.Expanding,QSizePolicy.Minimum))
+
+        self.searchbar = ProjectSearchBar()
+        self.searchbar.setFixedWidth(600)  # optional
+        header.addWidget(self.searchbar)
 
         self.btn_archived = QPushButton("Archivados")
         self.btn_archived.clicked.connect(self._open_archived_projects)
