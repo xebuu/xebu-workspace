@@ -31,6 +31,7 @@ class ProcessDef:
     id: str
     name: str
     description: str
+    is_pinned: bool
     scripts: List[ScriptItem] = field(default_factory=list)
     links: List[LinkItem] = field(default_factory=list)
     copiers: List[CopierItem] = field(default_factory=list)
@@ -49,6 +50,7 @@ class ProcessDef:
             id=d.get("id", str(uuid.uuid4())),
             name=d.get("name", "Sin nombre"),
             description=d.get("description", ""),
+            is_pinned=d.get("is_pinned",False),
             scripts=[ScriptItem(**s) for s in d.get("scripts", [])],
             links=[LinkItem(**l) for l in d.get("links", [])],
             copiers=[CopierItem(**c) for c in raw_copiers],
@@ -58,6 +60,7 @@ class ProcessDef:
         return {
             "id": self.id,
             "name": self.name,
+            "is_pinned":self.is_pinned,
             "description": self.description,
             "scripts": [asdict(s) for s in self.scripts],
             "links": [asdict(l) for l in self.links],

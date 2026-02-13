@@ -95,6 +95,7 @@ class ProjectManagerTab(QMainWindow):
             self.grid.addWidget(lbl, 0,0, alignment=Qt.AlignTop)
             return
 
+        processes.sort(key=lambda p: (not getattr(p,"is_pinned", False), getattr(p,"name","").lower()))
         cols = 1  # vertical
         for idx, proc in enumerate(processes):
             r, c = divmod(idx, cols)
@@ -134,7 +135,7 @@ class ProjectManagerTab(QMainWindow):
                 act_archive_proc = menu.addAction("Archivar")
 
                 menu.addSeparator()
-                
+
                 act_del = menu.addAction("Borrar")
         
                 global_pos = card.mapToGlobal(event.position().toPoint())
@@ -146,6 +147,8 @@ class ProjectManagerTab(QMainWindow):
                     parent._delete_process(proc.id)
                 elif action == act_archive_proc:
                     parent._archive_process(proc.id)
+                elif action == act_pin:
+                    parent._pin_project(proc.id)
 
         card.mousePressEvent = _on_card_click
         card.setCursor(Qt.PointingHandCursor)
@@ -213,7 +216,7 @@ class ProjectManagerTab(QMainWindow):
         for p in procs:
             if p.get("id") == proc_id:
                 p["is_archived"] = True
-                p["achived_at"] = now_iso
+                p["archived_at"] = now_iso
                 updated = True
                 break
 
@@ -259,3 +262,18 @@ class ProjectManagerTab(QMainWindow):
         ]
 
         self._render(filtered, query=text)
+
+    def _pin_project(self, proc_id: str):
+        procs = self.db.get("processes", [])
+        updated = False
+        for p in procs:
+            if p.get("id") == proc_id:
+                p["is_pinned"] = not p.get("is_pinned",False)
+                updated = True
+                break
+        if not updated:
+            return
+        self.db["processes"] = procs
+        self.projects_repo.save(self.db)
+        self._render()
+    
