@@ -53,9 +53,6 @@ class ProjectViewWindow(QMainWindow):
         left.addLayout(TextEditHeader)
         left.addWidget(scrollDesc)
 
-        for s in proc.scripts:
-            left.addWidget(self._script_row(s))
-
         # --- Consola compacta + toggle (cambios mínimos) ---
         toggle_console = QPushButton("Ocultar consola")
         toggle_console.setCheckable(True)
@@ -88,6 +85,11 @@ class ProjectViewWindow(QMainWindow):
                 btn = QPushButton(f"📥 {cp.title}")
                 btn.clicked.connect(lambda _=None, x=cp: self._runner_copy(x))
                 right.addWidget(btn)
+
+        if getattr(proc, "scripts", None):
+            right.addWidget(self._hlabel("Scripts"))
+            for s in proc.scripts:
+                right.addWidget(self._script_row(s))
 
         right.addStretch()
 
