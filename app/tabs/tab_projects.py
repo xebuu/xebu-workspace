@@ -114,7 +114,8 @@ class ProjectManagerTab(QMainWindow):
         header = QHBoxLayout(headerW)
         header.setContentsMargins(0, 0, 0, 0)
         title = QLabel(proc.name,headerW); title.setObjectName("CardTitle")
-        pin_icon = QLabel("PINNED",headerW)
+        pin_icon = QLabel("📌",headerW)
+        pin_icon.setObjectName("PinIcon")
         pin_icon.setVisible(is_pinned)
         header.addWidget(title); header.addStretch();header.addWidget(pin_icon)
 
