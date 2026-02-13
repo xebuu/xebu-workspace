@@ -2,6 +2,18 @@
    GENERAL BUTTONS
 =========================== */
 
+QWidget#ProjectViewerBackground {
+
+    background: #2d2d2d;
+}
+
+QTextEdit {
+    background: #1E1E1E;
+    color: #EFEDE1;
+    padding: 6px 8px;
+}
+
+
 QPushButton {
     color: #fff;
     background: #2d2d2d;
@@ -181,8 +193,6 @@ QDialog {
     background: #1b2224;
 }
 
-QLineEdit,
-QTextEdit,
 QListWidget {
     background: #1D2927;
     color: #EFEDE1;
@@ -201,22 +211,11 @@ QListWidget::item:hover {
     border-radius: 6px;
 }
 
-QTextEdit {
-    background: #1D2927;
-    color: #EFEDE1;
-    border: 1px solid #2e3b3f;
-    border-radius: 8px;
-    padding: 8px;
-}
-
-
 QLineEdit, QComboBox {
     background:#1D2927; color:#EFEDE1;
     border:1px solid #2e3b3f; border-radius:8px; padding:6px 8px;
 }
 QCheckBox { color:#EFEDE1; }
-
-QScrollArea { border: 1px solid #2e3b3f; border-radius: 10px; }
 QWidget#TaskRow {
     background:#253532; border:1px solid #2e3b3f; border-radius:10px;
 }
@@ -255,3 +254,20 @@ QCalendarWidget QToolButton {
     font-weight: 700;
     border: none;}
 
+QLineEdit#ProjectSearchBar {
+    background-color: #242424;     
+    color: #e6e6e6;              
+    border: 1px solid #3f3f3f;     
+    border-radius: 12px;
+    padding: 6px 12px;
+    selection-background-color: #3a3a3a;
+}
+
+QLineEdit#ProjectSearchBar:hover {
+    border: 1px solid #505050;
+}
+
+QLineEdit#ProjectSearchBar:focus {
+    border: 1px solid #fff;
+    background-color: #2a2a2a;
+}

@@ -22,6 +22,7 @@ class ProjectViewWindow(QMainWindow):
 
 
         central = QWidget(); self.setCentralWidget(central)
+        central.setObjectName("ProjectViewerBackground")
         root = QHBoxLayout(central); root.setContentsMargins(12,12,12,12); root.setSpacing(10)
 
         # ==== Left: Description + scripts + output ====
@@ -77,6 +78,7 @@ class ProjectViewWindow(QMainWindow):
         right.addWidget(self._hlabel("Accesos"))
         for lk in proc.links:
             btn = QPushButton(f"🔗 {lk.title}")
+            btn.setObjectName("LinkButton")
             btn.clicked.connect(lambda _=None, t=lk.target: self._open(t))
             right.addWidget(btn)
 
