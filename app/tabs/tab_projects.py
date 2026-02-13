@@ -125,9 +125,18 @@ class ProjectManagerTab(QMainWindow):
             elif event.button() == Qt.RightButton:
                 menu = QMenu(card)
                 act_edit = menu.addAction("Editar")
-                act_del = menu.addAction("Borrar")
+
+                if getattr(proc,"is_pinned",False):
+                    act_pin = menu.addAction("Desfijar")
+                else:
+                    act_pin = menu.addAction("Fijar")
+                
                 act_archive_proc = menu.addAction("Archivar")
 
+                menu.addSeparator()
+                
+                act_del = menu.addAction("Borrar")
+        
                 global_pos = card.mapToGlobal(event.position().toPoint())
                 action = menu.exec(global_pos)
 
