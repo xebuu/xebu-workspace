@@ -9,11 +9,3 @@ class ProjectSearchBar(QLineEdit):
 
         self.setPlaceholderText("Buscar proyecto…") # UX defaults
         self.setClearButtonEnabled(True)
-
-        # Basic rounded look for now (you can later move/override in your QSS)<
-        self.setStyleSheet("""
-            QLineEdit#ProjectSearchBar {
-                border-radius: 12px;
-                padding: 6px 10px;
-            }
-        """)
