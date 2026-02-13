@@ -105,10 +105,19 @@ class ProjectManagerTab(QMainWindow):
         self.grid.setRowStretch(self.grid.rowCount(), 1)
 
     def _make_card(self, proc: ProcessDef) -> QWidget:
+
         card = QFrame(); card.setObjectName("Card")
         v = QVBoxLayout(card); v.setContentsMargins(12,10,12,10); v.setSpacing(6)
 
-        title = QLabel(proc.name); title.setObjectName("CardTitle")
+        is_pinned = getattr(proc, "is_pinned", False)
+        headerW = QWidget(card)
+        header = QHBoxLayout(headerW)
+        header.setContentsMargins(0, 0, 0, 0)
+        title = QLabel(proc.name,headerW); title.setObjectName("CardTitle")
+        pin_icon = QLabel("PINNED",headerW)
+        pin_icon.setVisible(is_pinned)
+        header.addWidget(title); header.addStretch();header.addWidget(pin_icon)
+
         meta = QLabel(proc.description[:120] + ("…" if len(proc.description)>120 else ""))
         meta.setObjectName("CardMeta")
         meta.setWordWrap(True)
@@ -157,10 +166,10 @@ class ProjectManagerTab(QMainWindow):
         btns.addWidget(btn_del) 
         btns.addStretch()
 
-        v.addWidget(title)
+        v.addWidget(headerW)
         v.addWidget(meta)
         v.addLayout(btns)
-   
+
         return card
 
     # ---- open windows ----
