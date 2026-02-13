@@ -95,6 +95,7 @@ class ProjectManagerTab(QMainWindow):
             self.grid.addWidget(lbl, 0,0, alignment=Qt.AlignTop)
             return
 
+        processes.sort(key=lambda p: (not getattr(p,"is_pinned", False), getattr(p,"name","").lower()))
         cols = 1  # vertical
         for idx, proc in enumerate(processes):
             r, c = divmod(idx, cols)
@@ -104,10 +105,20 @@ class ProjectManagerTab(QMainWindow):
         self.grid.setRowStretch(self.grid.rowCount(), 1)
 
     def _make_card(self, proc: ProcessDef) -> QWidget:
+
         card = QFrame(); card.setObjectName("Card")
         v = QVBoxLayout(card); v.setContentsMargins(12,10,12,10); v.setSpacing(6)
 
-        title = QLabel(proc.name); title.setObjectName("CardTitle")
+        is_pinned = getattr(proc, "is_pinned", False)
+        headerW = QWidget(card)
+        header = QHBoxLayout(headerW)
+        header.setContentsMargins(0, 0, 0, 0)
+        title = QLabel(proc.name,headerW); title.setObjectName("CardTitle")
+        pin_icon = QLabel("📌",headerW)
+        pin_icon.setObjectName("PinIcon")
+        pin_icon.setVisible(is_pinned)
+        header.addWidget(title); header.addStretch();header.addWidget(pin_icon)
+
         meta = QLabel(proc.description[:120] + ("…" if len(proc.description)>120 else ""))
         meta.setObjectName("CardMeta")
         meta.setWordWrap(True)
@@ -125,9 +136,18 @@ class ProjectManagerTab(QMainWindow):
             elif event.button() == Qt.RightButton:
                 menu = QMenu(card)
                 act_edit = menu.addAction("Editar")
-                act_del = menu.addAction("Borrar")
+
+                if getattr(proc,"is_pinned",False):
+                    act_pin = menu.addAction("Desfijar")
+                else:
+                    act_pin = menu.addAction("Fijar")
+                
                 act_archive_proc = menu.addAction("Archivar")
 
+                menu.addSeparator()
+
+                act_del = menu.addAction("Borrar")
+        
                 global_pos = card.mapToGlobal(event.position().toPoint())
                 action = menu.exec(global_pos)
 
@@ -137,6 +157,8 @@ class ProjectManagerTab(QMainWindow):
                     parent._delete_process(proc.id)
                 elif action == act_archive_proc:
                     parent._archive_process(proc.id)
+                elif action == act_pin:
+                    parent._pin_project(proc.id)
 
         card.mousePressEvent = _on_card_click
         card.setCursor(Qt.PointingHandCursor)
@@ -145,10 +167,10 @@ class ProjectManagerTab(QMainWindow):
         btns.addWidget(btn_del) 
         btns.addStretch()
 
-        v.addWidget(title)
+        v.addWidget(headerW)
         v.addWidget(meta)
         v.addLayout(btns)
-   
+
         return card
 
     # ---- open windows ----
@@ -204,7 +226,7 @@ class ProjectManagerTab(QMainWindow):
         for p in procs:
             if p.get("id") == proc_id:
                 p["is_archived"] = True
-                p["achived_at"] = now_iso
+                p["archived_at"] = now_iso
                 updated = True
                 break
 
@@ -250,3 +272,18 @@ class ProjectManagerTab(QMainWindow):
         ]
 
         self._render(filtered, query=text)
+
+    def _pin_project(self, proc_id: str):
+        procs = self.db.get("processes", [])
+        updated = False
+        for p in procs:
+            if p.get("id") == proc_id:
+                p["is_pinned"] = not p.get("is_pinned",False)
+                updated = True
+                break
+        if not updated:
+            return
+        self.db["processes"] = procs
+        self.projects_repo.save(self.db)
+        self._render()
+    
