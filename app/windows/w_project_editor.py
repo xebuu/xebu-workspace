@@ -26,7 +26,7 @@ class ProjectEditorWindow(QDialog):
         self.resize(800, 550)
         self.setModal(True)
         self.proc = existing or ProcessDef(
-            id=str(uuid.uuid4()), name="", description="", scripts=[], links=[], copiers=[]
+            id=str(uuid.uuid4()), name="", description="", scripts=[], links=[], copiers=[], is_pinned=False
         )
 
         root = QVBoxLayout(self)
