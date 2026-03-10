@@ -25,9 +25,9 @@ class _TaskRow(QFrame):
         lay.setContentsMargins(10, 8, 10, 8)
         lay.setSpacing(8)
 
-        lbl = QLabel(self._format_text(task))
-        lbl.setObjectName("TaskLabel")
-        lbl.setWordWrap(True)
+        self.lbl = QLabel(self._format_text(task))
+        self.lbl.setObjectName("TaskLabel")
+        self.lbl.setWordWrap(True)
 
         # Botón toggle cambia según estado: ✔ para completar, ↩️ para desmarcar
         is_done = task.get("completado", False)
@@ -44,15 +44,17 @@ class _TaskRow(QFrame):
         btn_delete.clicked.connect(lambda: self.on_delete(task))
         btn_archive.clicked.connect(lambda: self.on_archive(task))
 
-        lay.addWidget(lbl, 1)
+        lay.addWidget(self.lbl, 1)
         lay.addWidget(self.btn_toggle)
         lay.addWidget(btn_delete)
         lay.addWidget(btn_archive)
 
     def update_toggle_button(self):
-        """Actualiza el texto del botón toggle según el estado actual de la tarea"""
+        """Actualiza el texto del botón toggle y el label según el estado actual de la tarea"""
         is_done = self.task.get("completado", False)
         self.btn_toggle.setText("↺" if is_done else "✔")
+        # Actualizar también el label para reflejar cambios en la fecha de vencimiento
+        self.lbl.setText(self._format_text(self.task))
 
     def _format_text(self, t: dict) -> str:
         # texto + (días restantes) + diaria + prioridad en bolitas
