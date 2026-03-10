@@ -7,7 +7,7 @@ from PySide6.QtCore import  QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QFrame, QTextEdit, QFileDialog, QMessageBox)
+    QScrollArea, QFrame, QTextEdit, QFileDialog, QMessageBox, QComboBox)
 
 from app.models.project_models import ProcessDef, ScriptItem, CopierItem
 
@@ -44,6 +44,15 @@ class ProjectViewWindow(QMainWindow):
         btn_bold.clicked.connect(self._toggle_bold)
         self.btn_bold = btn_bold
         TextEditHeader.addWidget(btn_bold)
+
+        # size selector (simple dropdown with few point sizes)
+        self.size_selector = QComboBox()
+        for sz in (8, 12, 16, 20):
+            self.size_selector.addItem(str(sz))
+        self.size_selector.setToolTip("Tamaño de texto / Font size")
+        # use text-based signal since activated(int) is the only overload available
+        self.size_selector.currentTextChanged.connect(self._change_font_size)
+        TextEditHeader.addWidget(self.size_selector)
         # update formatting state when cursor moves
         # (connect after creating QTextEdit below)
 
@@ -62,6 +71,11 @@ class ProjectViewWindow(QMainWindow):
         self.desc.setContentsMargins(0,0,0,0)
         self.desc.setFixedHeight(700)
         self.desc.cursorPositionChanged.connect(self._update_format_buttons)
+        # initialize size selector to current font size
+        if hasattr(self, 'size_selector'):
+            pt = self.desc.fontPointSize()
+            if pt:
+                self.size_selector.setCurrentText(str(int(pt)))
 
         scrollDesc = QScrollArea()
         scrollDesc.setWidgetResizable(True)
@@ -146,12 +160,32 @@ class ProjectViewWindow(QMainWindow):
         if hasattr(self, 'btn_bold'):
             self.btn_bold.setChecked(new_weight == QFont.Bold)
 
+    def _change_font_size(self, text: str):
+        """Change font size for selection or future typing."""
+        try:
+            size = float(text)
+        except ValueError:
+            return
+        cursor = self.desc.textCursor()
+        if cursor.hasSelection():
+            fmt = cursor.charFormat()
+            fmt.setFontPointSize(size)
+            cursor.mergeCharFormat(fmt)
+        else:
+            self.desc.setFontPointSize(size)
+        # keep combobox in sync
+        if hasattr(self, 'size_selector'):
+            self.size_selector.setCurrentText(str(int(size)))
+
     def _update_format_buttons(self):
         """Keep toolbar buttons in sync with current cursor format."""
         fmt = self.desc.currentCharFormat()
         if hasattr(self, 'btn_bold'):
             self.btn_bold.setChecked(fmt.fontWeight() == QFont.Bold)
-
+        if hasattr(self, 'size_selector'):
+            pt = fmt.fontPointSize() or self.desc.fontPointSize()
+            if pt:
+                self.size_selector.setCurrentText(str(int(pt)))
 
         # Si te pasaron un callback de guardado, úsalo
         if self.on_save_proc:
