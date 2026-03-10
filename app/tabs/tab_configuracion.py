@@ -71,6 +71,34 @@ class ConfiguracionTab(QWidget):
         self.group.buttonToggled.connect(self._on_theme_toggled)
         root.addLayout(row)
 
+        # Display mode selection section
+        mode_title = QLabel("Choose display mode")
+        mode_title.setObjectName("ModeTitle")
+        root.addWidget(mode_title)
+
+        # Row of 2 mode buttons
+        mode_row = QHBoxLayout()
+        mode_row.setSpacing(14)
+        mode_row.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+        self.mode_group = QButtonGroup(self)
+        self.mode_group.setExclusive(True)
+
+        self._mode_buttons: dict[str, QToolButton] = {}
+        self.selected_mode = "Dark"  # Default
+
+        for mode in ("Dark", "Light"):
+            btn = self._make_mode_button(mode)
+            self.mode_group.addButton(btn)
+            self._mode_buttons[mode] = btn
+            mode_row.addWidget(btn)
+
+            if mode == self.selected_mode:
+                btn.setChecked(True)
+
+        self.mode_group.buttonToggled.connect(self._on_mode_toggled)
+        root.addLayout(mode_row)
+
         # Save button
         self.save_btn = QPushButton("Save")
         self.save_btn.setObjectName("SaveBtn")
@@ -79,7 +107,7 @@ class ConfiguracionTab(QWidget):
         root.addWidget(self.save_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         # Small hint label
-        self.hint_label = QLabel(f"Saved theme: {self.selected_theme_name}. Selection stored in config.json.")
+        self.hint_label = QLabel(f"Saved theme: {self.selected_theme_name}, mode: {self.selected_mode}. Selection stored in config.json.")
         self.hint_label.setObjectName("HintLabel")
         self.hint_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         root.addWidget(self.hint_label)
@@ -121,10 +149,33 @@ class ConfiguracionTab(QWidget):
         for name, btn in self._buttons.items():
             if btn is button:
                 self.selected_theme_name = name
+                self.hint_label.setText(f"Saved theme: {self.selected_theme_name}, mode: {self.selected_mode}. Selection stored in config.json.")
+                break
+
+    def _make_mode_button(self, mode_name: str) -> QToolButton:
+        btn = QToolButton(self)
+        btn.setCheckable(True)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.setFixedSize(80, 36)  # rectangular button
+        btn.setObjectName("ModeBtn")
+        btn.setText(mode_name)
+
+        # Optional: tooltip to show mode name
+        btn.setToolTip(f"{mode_name} mode")
+        return btn
+
+    def _on_mode_toggled(self, button: QToolButton, checked: bool):
+        if not checked:
+            return
+        # Find which mode is checked
+        for name, btn in self._mode_buttons.items():
+            if btn is button:
+                self.selected_mode = name
+                self.hint_label.setText(f"Saved theme: {self.selected_theme_name}, mode: {self.selected_mode}. Selection stored in config.json.")
                 break
 
     def _save(self):
         # Placeholder save functionality - just show message
-        QMessageBox.information(self, "Saved", f"Saved theme: {self.selected_theme_name}")
+        QMessageBox.information(self, "Saved", f"Saved theme: {self.selected_theme_name}, mode: {self.selected_mode}")
         self.hint_label.setText(
-            f"Saved theme: {self.selected_theme_name}. Selection stored in config.json.")
+            f"Saved theme: {self.selected_theme_name}, mode: {self.selected_mode}. Selection stored in config.json.")
