@@ -313,3 +313,37 @@ QToolButton#ModeBtn:checked {
     background: #3a3a3a;
     border: 2px solid #ffffff;
 }
+
+QLabel#UserDataTitle {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+QPushButton#UserDataBtn {
+    border-radius: 6px;
+    font-weight: 500;
+    padding: 6px 12px;
+    background: #363636;
+    color: #ffffff;
+    text-align: left;
+}
+
+QPushButton#UserDataBtn:hover {
+    background: #404040;
+}
+
+QPushButton#UserDataBtn:pressed {
+    background: #2a2a2a;
+}
+
+QFrame#CosmeticFrame {
+    border: 1px solid #555555;
+    border-radius: 8px;
+    background: #2a2a2a;
+}
+
+QFrame#UserDataFrame {
+    border: 1px solid #555555;
+    border-radius: 8px;
+    background: #2a2a2a;
+}

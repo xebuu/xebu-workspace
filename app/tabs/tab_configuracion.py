@@ -7,7 +7,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QMessageBox, QButtonGroup, QToolButton
+    QMessageBox, QButtonGroup, QToolButton, QFrame
 )
 
 THEMES = {
@@ -43,10 +43,19 @@ class ConfiguracionTab(QWidget):
         title.setAlignment(Qt.AlignCenter)
         root.addWidget(title)
 
+        # Cosmetic settings group
+        cosmetic_frame = QFrame()
+        cosmetic_frame.setObjectName("CosmeticFrame")
+        cosmetic_frame.setFrameStyle(QFrame.Box)
+        cosmetic_frame.setLineWidth(1)
+        cosmetic_layout = QVBoxLayout(cosmetic_frame)
+        cosmetic_layout.setContentsMargins(12, 12, 12, 12)
+        cosmetic_layout.setSpacing(12)
+
         # Theme selection section
         theme_title = QLabel("Choose highlight color")
         theme_title.setObjectName("ThemeTitle")
-        root.addWidget(theme_title)
+        cosmetic_layout.addWidget(theme_title)
 
         # Row of 5 circular buttons
         row = QHBoxLayout()
@@ -69,12 +78,12 @@ class ConfiguracionTab(QWidget):
                 btn.setChecked(True)
 
         self.group.buttonToggled.connect(self._on_theme_toggled)
-        root.addLayout(row)
+        cosmetic_layout.addLayout(row)
 
         # Display mode selection section
         mode_title = QLabel("Choose display mode")
         mode_title.setObjectName("ModeTitle")
-        root.addWidget(mode_title)
+        cosmetic_layout.addWidget(mode_title)
 
         # Row of 2 mode buttons
         mode_row = QHBoxLayout()
@@ -97,20 +106,62 @@ class ConfiguracionTab(QWidget):
                 btn.setChecked(True)
 
         self.mode_group.buttonToggled.connect(self._on_mode_toggled)
-        root.addLayout(mode_row)
+        cosmetic_layout.addLayout(mode_row)
 
         # Save button
         self.save_btn = QPushButton("Save")
         self.save_btn.setObjectName("SaveBtn")
         self.save_btn.setFixedHeight(36)
         self.save_btn.clicked.connect(self._save)
-        root.addWidget(self.save_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
+        cosmetic_layout.addWidget(self.save_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         # Small hint label
         self.hint_label = QLabel(f"Saved theme: {self.selected_theme_name}, mode: {self.selected_mode}. Selection stored in config.json.")
         self.hint_label.setObjectName("HintLabel")
         self.hint_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        root.addWidget(self.hint_label)
+        cosmetic_layout.addWidget(self.hint_label)
+
+        root.addWidget(cosmetic_frame)
+
+        # User data group
+        user_data_frame = QFrame()
+        user_data_frame.setObjectName("UserDataFrame")
+        user_data_frame.setFrameStyle(QFrame.Box)
+        user_data_frame.setLineWidth(1)
+        user_data_layout_outer = QVBoxLayout(user_data_frame)
+        user_data_layout_outer.setContentsMargins(12, 12, 12, 12)
+        user_data_layout_outer.setSpacing(12)
+
+        # User data section
+        user_data_title = QLabel("User data")
+        user_data_title.setObjectName("UserDataTitle")
+        user_data_layout_outer.addWidget(user_data_title)
+
+        # User data buttons in a vertical layout
+        user_data_layout = QVBoxLayout()
+        user_data_layout.setSpacing(8)
+
+        self.export_btn = QPushButton("Export my data")
+        self.export_btn.setObjectName("UserDataBtn")
+        self.export_btn.setFixedHeight(32)
+        self.export_btn.clicked.connect(self._export_data)
+        user_data_layout.addWidget(self.export_btn)
+
+        self.delete_btn = QPushButton("Delete my data")
+        self.delete_btn.setObjectName("UserDataBtn")
+        self.delete_btn.setFixedHeight(32)
+        self.delete_btn.clicked.connect(self._delete_data)
+        user_data_layout.addWidget(self.delete_btn)
+
+        self.view_btn = QPushButton("View my data")
+        self.view_btn.setObjectName("UserDataBtn")
+        self.view_btn.setFixedHeight(32)
+        self.view_btn.clicked.connect(self._view_data)
+        user_data_layout.addWidget(self.view_btn)
+
+        user_data_layout_outer.addLayout(user_data_layout)
+
+        root.addWidget(user_data_frame)
 
         root.addStretch()
 
@@ -179,3 +230,22 @@ class ConfiguracionTab(QWidget):
         QMessageBox.information(self, "Saved", f"Saved theme: {self.selected_theme_name}, mode: {self.selected_mode}")
         self.hint_label.setText(
             f"Saved theme: {self.selected_theme_name}, mode: {self.selected_mode}. Selection stored in config.json.")
+
+    def _export_data(self):
+        # Placeholder export functionality
+        QMessageBox.information(self, "Export Data", "Export functionality coming soon!\n\nThis will allow you to export all your data.")
+
+    def _delete_data(self):
+        # Placeholder delete functionality with confirmation
+        reply = QMessageBox.question(
+            self, "Delete Data",
+            "Are you sure you want to delete all your data?\n\nThis action cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            QMessageBox.information(self, "Delete Data", "Delete functionality coming soon!\n\nAll your data would be permanently removed.")
+
+    def _view_data(self):
+        # Placeholder view functionality
+        QMessageBox.information(self, "View Data", "View functionality coming soon!\n\nThis will show you all your stored data.")
