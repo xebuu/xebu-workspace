@@ -29,22 +29,30 @@ class _TaskRow(QFrame):
         lbl.setObjectName("TaskLabel")
         lbl.setWordWrap(True)
 
-        btn_toggle = QPushButton("✔"); btn_toggle.setObjectName("BtnOk")
+        # Botón toggle cambia según estado: ✔ para completar, ↩️ para desmarcar
+        is_done = task.get("completado", False)
+        toggle_text = "↩️" if is_done else "✔"
+        self.btn_toggle = QPushButton(toggle_text); self.btn_toggle.setObjectName("BtnOk")
         btn_delete = QPushButton("🗑️"); btn_delete.setObjectName("BtnDel")
         btn_archive = QPushButton("🗃️"); btn_archive.setObjectName("BtnArc")
 
-        btn_toggle.setFixedWidth(40)
+        self.btn_toggle.setFixedWidth(40)
         btn_delete.setFixedWidth(40)
         btn_archive.setFixedWidth(40)
 
-        btn_toggle.clicked.connect(lambda: self.on_toggle(task))
+        self.btn_toggle.clicked.connect(lambda: self.on_toggle(task))
         btn_delete.clicked.connect(lambda: self.on_delete(task))
         btn_archive.clicked.connect(lambda: self.on_archive(task))
 
         lay.addWidget(lbl, 1)
-        lay.addWidget(btn_toggle)
+        lay.addWidget(self.btn_toggle)
         lay.addWidget(btn_delete)
         lay.addWidget(btn_archive)
+
+    def update_toggle_button(self):
+        """Actualiza el texto del botón toggle según el estado actual de la tarea"""
+        is_done = self.task.get("completado", False)
+        self.btn_toggle.setText("↺" if is_done else "✔")
 
     def _format_text(self, t: dict) -> str:
         # texto + (días restantes) + diaria + prioridad en bolitas
@@ -193,6 +201,9 @@ class TasksWindow(QMainWindow):
         task_id = id(task)
         if task_id in self.task_widgets:
             row = self.task_widgets[task_id]
+            
+            # Actualizar el botón toggle
+            row.update_toggle_button()
             
             # Remover del layout de origen
             if task.get("completado", False):
