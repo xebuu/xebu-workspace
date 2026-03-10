@@ -64,7 +64,8 @@ class _TaskRow(QFrame):
             icono = "⚪⚪"
 
         dias_restantes = ""
-        if dl:
+        # Solo mostrar deadline si la tarea NO está completada Y NO es diaria
+        if dl and not done and not diaria:
             try:
                 fl = datetime.datetime.strptime(dl, "%Y-%m-%d").date()
                 hoy = datetime.date.today()
