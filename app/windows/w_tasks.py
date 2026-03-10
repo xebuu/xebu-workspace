@@ -25,26 +25,36 @@ class _TaskRow(QFrame):
         lay.setContentsMargins(10, 8, 10, 8)
         lay.setSpacing(8)
 
-        lbl = QLabel(self._format_text(task))
-        lbl.setObjectName("TaskLabel")
-        lbl.setWordWrap(True)
+        self.lbl = QLabel(self._format_text(task))
+        self.lbl.setObjectName("TaskLabel")
+        self.lbl.setWordWrap(True)
 
-        btn_toggle = QPushButton("✔"); btn_toggle.setObjectName("BtnOk")
+        # Botón toggle cambia según estado: ✔ para completar, ↩️ para desmarcar
+        is_done = task.get("completado", False)
+        toggle_text = "↩️" if is_done else "✔"
+        self.btn_toggle = QPushButton(toggle_text); self.btn_toggle.setObjectName("BtnOk")
         btn_delete = QPushButton("🗑️"); btn_delete.setObjectName("BtnDel")
         btn_archive = QPushButton("🗃️"); btn_archive.setObjectName("BtnArc")
 
-        btn_toggle.setFixedWidth(40)
+        self.btn_toggle.setFixedWidth(40)
         btn_delete.setFixedWidth(40)
         btn_archive.setFixedWidth(40)
 
-        btn_toggle.clicked.connect(lambda: self.on_toggle(task))
+        self.btn_toggle.clicked.connect(lambda: self.on_toggle(task))
         btn_delete.clicked.connect(lambda: self.on_delete(task))
         btn_archive.clicked.connect(lambda: self.on_archive(task))
 
-        lay.addWidget(lbl, 1)
-        lay.addWidget(btn_toggle)
+        lay.addWidget(self.lbl, 1)
+        lay.addWidget(self.btn_toggle)
         lay.addWidget(btn_delete)
         lay.addWidget(btn_archive)
+
+    def update_toggle_button(self):
+        """Actualiza el texto del botón toggle y el label según el estado actual de la tarea"""
+        is_done = self.task.get("completado", False)
+        self.btn_toggle.setText("↺" if is_done else "✔")
+        # Actualizar también el label para reflejar cambios en la fecha de vencimiento
+        self.lbl.setText(self._format_text(self.task))
 
     def _format_text(self, t: dict) -> str:
         # texto + (días restantes) + diaria + prioridad en bolitas
@@ -64,7 +74,8 @@ class _TaskRow(QFrame):
             icono = "⚪⚪"
 
         dias_restantes = ""
-        if dl:
+        # Solo mostrar deadline si la tarea NO está completada Y NO es diaria
+        if dl and not done and not diaria:
             try:
                 fl = datetime.datetime.strptime(dl, "%Y-%m-%d").date()
                 hoy = datetime.date.today()
@@ -89,6 +100,9 @@ class TasksWindow(QMainWindow):
 
         self.tasks = self.tasks_repo.load()
         self.tasks_repo.reset_daily_if_needed(self.tasks)
+
+        # Mapear tareas a widgets para actualizaciones eficientes
+        self.task_widgets = {}
 
         central = QWidget(self); self.setCentralWidget(central)
         root = QVBoxLayout(central); root.setContentsMargins(16,16,16,16); root.setSpacing(12)
@@ -164,23 +178,63 @@ class TasksWindow(QMainWindow):
         self.tasks.append(new_task)
         self.tasks_repo.save(self.tasks)
 
+        # Crear widget para la nueva tarea e insertarlo al principio (índice 0 es después del título)
+        row = _TaskRow(
+            new_task,
+            on_toggle=self._toggle_task,
+            on_delete=self._delete_task,
+            on_archive=self._archive_task)
+        self.task_widgets[id(new_task)] = row
+        # Obtener el índice del stretch y insertar antes de él
+        stretch_index = self.v_pending.count() - 1
+        self.v_pending.insertWidget(stretch_index, row)  # Insertar antes del stretch
+
         # limpiar entradas
         self.edt_new.clear()
         self.edt_deadline.setDate(QDate.currentDate())
         self.cmb_prio.setCurrentText("media")
         self.chk_daily.setChecked(False)
 
-        self._render()
-
     def _toggle_task(self, task: dict):
         task["completado"] = not task.get("completado", False)
         self.tasks_repo.save(self.tasks)
-        self._render()
+        
+        # Obtener el widget de la tarea
+        task_id = id(task)
+        if task_id in self.task_widgets:
+            row = self.task_widgets[task_id]
+            
+            # Actualizar el botón toggle
+            row.update_toggle_button()
+            
+            # Remover del layout de origen
+            if task.get("completado", False):
+                # Mover a completadas (al final, antes del stretch)
+                self.v_pending.removeWidget(row)
+                stretch_index = self.v_done.count() - 1
+                self.v_done.insertWidget(stretch_index, row)
+            else:
+                # Mover a pendientes (al final, antes del stretch)
+                self.v_done.removeWidget(row)
+                stretch_index = self.v_pending.count() - 1
+                self.v_pending.insertWidget(stretch_index, row)
 
     def _delete_task(self, task: dict):
+        task_id = id(task)
+        
+        # Remover widget del layout
+        if task_id in self.task_widgets:
+            row = self.task_widgets[task_id]
+            if task.get("completado", False):
+                self.v_done.removeWidget(row)
+            else:
+                self.v_pending.removeWidget(row)
+            row.setParent(None)
+            del self.task_widgets[task_id]
+        
+        # Remover de la lista de tareas
         self.tasks = [t for t in self.tasks if t is not task]
         self.tasks_repo.save(self.tasks)
-        self._render()
 
     def _archive_task(self, task: dict):
         ok, err = self.arch_repo.append_task(task)
@@ -191,6 +245,7 @@ class TasksWindow(QMainWindow):
 
     # ---------- Render ----------
     def _render(self):
+        """Renderización inicial: limpia y construye todos los widgets"""
         # limpiar layouts
         def clear_layout(vbox: QVBoxLayout):
             for i in reversed(range(vbox.count())):
@@ -199,14 +254,16 @@ class TasksWindow(QMainWindow):
 
         clear_layout(self.v_pending)
         clear_layout(self.v_done)
+        self.task_widgets.clear()
 
-        # reconstruir filas
+        # reconstruir filas y mapear
         for t in self.tasks:
             row = _TaskRow(
                 t,
                 on_toggle=self._toggle_task,
                 on_delete=self._delete_task,
                 on_archive=self._archive_task)
+            self.task_widgets[id(t)] = row
             
             if t.get("completado", False):
                 self.v_done.addWidget(row)
