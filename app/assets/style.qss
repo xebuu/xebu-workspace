@@ -270,3 +270,29 @@ QLineEdit:focus {
     border: 1px solid #fff;
     background-color: #2a2a2a;
 }
+
+/* ===========================
+   CONFIGURACION TAB
+=========================== */
+
+QLabel#ThemeTitle {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+QPushButton#SaveBtn {
+    border-radius: 10px;
+    font-weight: 700;
+    padding: 8px 14px;
+    background: #2d2d2d;
+    color: #ffffff;
+}
+
+QPushButton#SaveBtn:hover {
+    background: #3a3a3a;
+}
+
+QLabel#HintLabel {
+    color: #9a9a9a;
+    font-size: 11px;
+}
