@@ -2,6 +2,8 @@
    GENERAL BUTTONS
 =========================== */
 
+QMainWindow {background: #2d2d2d;}
+
 QWidget#ProjectViewerBackground {
 
     background: #2d2d2d;
@@ -211,11 +213,8 @@ QListWidget::item:hover {
     border-radius: 6px;
 }
 
-QLineEdit, QComboBox {
-    background:#1D2927; color:#EFEDE1;
-    border:1px solid #2e3b3f; border-radius:8px; padding:6px 8px;
-}
-QCheckBox { color:#EFEDE1; }
+
+QCheckBox { color: #EFEDE1; }
 QWidget#TaskRow {
     background:#253532; border:1px solid #2e3b3f; border-radius:10px;
 }
@@ -254,7 +253,7 @@ QCalendarWidget QToolButton {
     font-weight: 700;
     border: none;}
 
-QLineEdit#ProjectSearchBar {
+QLineEdit {
     background-color: #242424;     
     color: #e6e6e6;              
     border: 1px solid #3f3f3f;     
@@ -263,11 +262,11 @@ QLineEdit#ProjectSearchBar {
     selection-background-color: #3a3a3a;
 }
 
-QLineEdit#ProjectSearchBar:hover {
+QLineEdit:hover {
     border: 1px solid #505050;
 }
 
-QLineEdit#ProjectSearchBar:focus {
+QLineEdit:focus {
     border: 1px solid #fff;
     background-color: #2a2a2a;
 }
