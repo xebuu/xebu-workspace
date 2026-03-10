@@ -14,6 +14,7 @@ from PySide6.QtGui import QAction, QKeySequence, QShortcut
 
 # Vista interna
 from app.tabs.tab_projects import ProjectManagerTab
+from app.tabs.tab_configuracion import ConfiguracionTab
 from app.windows.w_bitacora import BitacoraWindow
 from app.windows.w_tasks import TasksWindow
 from app.utility.helpers import show_loading_then
@@ -109,6 +110,7 @@ class SideBar(QWidget):
         tabs = [
             ("📝  Proyectos", 0),
             ("🛰️  Coming Soon", 1),
+            ("⚙️  Configuración", 2),
         ]
         for text, idx in tabs:
             btn = QPushButton(text)
@@ -155,7 +157,7 @@ class MainWindow(QMainWindow):
         hbox.setSpacing(0)
 
         self.stack = QStackedWidget()
-        self.pages = [None, None]  
+        self.pages = [None, None, None]  
 
         self.sidebar = SideBar(on_tab_selected=self.show_tab)
         hbox.addWidget(self.sidebar)
@@ -179,6 +181,8 @@ class MainWindow(QMainWindow):
                 page = ProjectManagerTab()
             elif idx == 1:
                 page = self.tab_temporal("Coming Soon")
+            elif idx == 2:
+                page = ConfiguracionTab()
             else:
                 raise IndexError("Índice de tab inválido")
 

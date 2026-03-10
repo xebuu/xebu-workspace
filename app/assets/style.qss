@@ -2,6 +2,8 @@
    GENERAL BUTTONS
 =========================== */
 
+QMainWindow {background: #2d2d2d;}
+
 QWidget#ProjectViewerBackground {
 
     background: #2d2d2d;
@@ -211,11 +213,8 @@ QListWidget::item:hover {
     border-radius: 6px;
 }
 
-QLineEdit, QComboBox {
-    background:#1D2927; color:#EFEDE1;
-    border:1px solid #2e3b3f; border-radius:8px; padding:6px 8px;
-}
-QCheckBox { color:#EFEDE1; }
+
+QCheckBox { color: #EFEDE1; }
 QWidget#TaskRow {
     background:#253532; border:1px solid #2e3b3f; border-radius:10px;
 }
@@ -254,7 +253,7 @@ QCalendarWidget QToolButton {
     font-weight: 700;
     border: none;}
 
-QLineEdit#ProjectSearchBar {
+QLineEdit {
     background-color: #242424;     
     color: #e6e6e6;              
     border: 1px solid #3f3f3f;     
@@ -263,11 +262,88 @@ QLineEdit#ProjectSearchBar {
     selection-background-color: #3a3a3a;
 }
 
-QLineEdit#ProjectSearchBar:hover {
+QLineEdit:hover {
     border: 1px solid #505050;
 }
 
-QLineEdit#ProjectSearchBar:focus {
+QLineEdit:focus {
     border: 1px solid #fff;
     background-color: #2a2a2a;
+}
+
+/* ===========================
+   CONFIGURACION TAB
+=========================== */
+
+QLabel#ThemeTitle {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+QPushButton#SaveBtn {
+    border-radius: 10px;
+    font-weight: 700;
+    padding: 8px 14px;
+    background: #2d2d2d;
+    color: #ffffff;
+}
+
+QPushButton#SaveBtn:hover {
+    background: #3a3a3a;
+}
+
+QLabel#HintLabel {
+    color: #9a9a9a;
+    font-size: 11px;
+}
+
+QToolButton#ModeBtn {
+    border-radius: 8px;
+    font-weight: 600;
+    background: #2d2d2d;
+    color: #ffffff;
+    border: 2px solid transparent;
+}
+
+QToolButton#ModeBtn:hover {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+QToolButton#ModeBtn:checked {
+    background: #3a3a3a;
+    border: 2px solid #ffffff;
+}
+
+QLabel#UserDataTitle {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+QPushButton#UserDataBtn {
+    border-radius: 6px;
+    font-weight: 500;
+    padding: 6px 12px;
+    background: #363636;
+    color: #ffffff;
+    text-align: left;
+}
+
+QPushButton#UserDataBtn:hover {
+    background: #404040;
+}
+
+QPushButton#UserDataBtn:pressed {
+    background: #2a2a2a;
+}
+
+QFrame#CosmeticFrame {
+    border: 1px solid #555555;
+    border-radius: 8px;
+    background: #2a2a2a;
+}
+
+QFrame#UserDataFrame {
+    border: 1px solid #555555;
+    border-radius: 8px;
+    background: #2a2a2a;
 }
