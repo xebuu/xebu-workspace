@@ -4,6 +4,7 @@ import sys, os,  subprocess, webbrowser
 from pathlib import Path
 
 from PySide6.QtCore import  QTimer
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QFrame, QTextEdit, QFileDialog, QMessageBox)
@@ -32,6 +33,20 @@ class ProjectViewWindow(QMainWindow):
         # ===== Left: botones para edición de texto ==========
 
         TextEditHeader = QHBoxLayout()
+        # text formatting controls
+        btn_bold = QPushButton("N")  # Negrita
+        # show bold letter on button itself
+        bold_font = QFont()
+        bold_font.setBold(True)
+        btn_bold.setFont(bold_font)
+        btn_bold.setCheckable(True)
+        btn_bold.setToolTip("Negrita / Bold")
+        btn_bold.clicked.connect(self._toggle_bold)
+        self.btn_bold = btn_bold
+        TextEditHeader.addWidget(btn_bold)
+        # update formatting state when cursor moves
+        # (connect after creating QTextEdit below)
+
         btn_save = QPushButton("💾 Guardar")
         btn_save.clicked.connect(self._save_description)
         TextEditHeader.addWidget(btn_save)
@@ -39,9 +54,14 @@ class ProjectViewWindow(QMainWindow):
 
         # --- Descripción con scroll (cambio mínimo) ---
         self.desc = QTextEdit()
-        self.desc.setPlainText(proc.description)
+        # handle previously stored HTML or plain text transparently
+        try:
+            self.desc.setHtml(proc.description)
+        except Exception:
+            self.desc.setPlainText(proc.description)
         self.desc.setContentsMargins(0,0,0,0)
         self.desc.setFixedHeight(700)
+        self.desc.cursorPositionChanged.connect(self._update_format_buttons)
 
         scrollDesc = QScrollArea()
         scrollDesc.setWidgetResizable(True)
@@ -97,8 +117,41 @@ class ProjectViewWindow(QMainWindow):
         root.addLayout(right, 1)
 
     def _save_description(self):
-        text = self.desc.toPlainText()
-        self.proc.description = text  # actualizar el modelo en memoria
+        # capture HTML so bold and indentation are preserved
+        html = self.desc.toHtml()
+        self.proc.description = html  # actualizar el modelo en memoria
+
+        # call optional callback to persist change
+        if self.on_save_proc:
+            self.on_save_proc(self.proc)
+
+        if self.statusBar():
+            self.statusBar().showMessage("Descripción guardada", 2000)
+
+    def _toggle_bold(self, checked: bool = False):
+        """Toggle bold formatting for the current selection or future text."""
+        cursor = self.desc.textCursor()
+        if cursor.hasSelection():
+            fmt = cursor.charFormat()
+            current_weight = fmt.fontWeight()
+            new_weight = QFont.Bold if current_weight != QFont.Bold else QFont.Normal
+            fmt.setFontWeight(new_weight)
+            cursor.mergeCharFormat(fmt)
+        else:
+            # when there's no selection, change the widget's default weight
+            current_weight = self.desc.fontWeight()
+            new_weight = QFont.Bold if current_weight != QFont.Bold else QFont.Normal
+            self.desc.setFontWeight(new_weight)
+        # reflect state on button
+        if hasattr(self, 'btn_bold'):
+            self.btn_bold.setChecked(new_weight == QFont.Bold)
+
+    def _update_format_buttons(self):
+        """Keep toolbar buttons in sync with current cursor format."""
+        fmt = self.desc.currentCharFormat()
+        if hasattr(self, 'btn_bold'):
+            self.btn_bold.setChecked(fmt.fontWeight() == QFont.Bold)
+
 
         # Si te pasaron un callback de guardado, úsalo
         if self.on_save_proc:

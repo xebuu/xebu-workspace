@@ -42,7 +42,12 @@ class ProjectEditorWindow(QDialog):
         head.addWidget(self.btn_add_any)
         root.addLayout(head)
 
-        self.edt_desc = QTextEdit(self.proc.description)
+        self.edt_desc = QTextEdit()
+        # support existing HTML or plain text descriptions
+        try:
+            self.edt_desc.setHtml(self.proc.description)
+        except Exception:
+            self.edt_desc.setPlainText(self.proc.description)
         self.edt_desc.setPlaceholderText("Descripción del proceso (qué hace, notas, etc.)")
         self.edt_desc.setFixedHeight(90)
         root.addWidget(self.edt_desc)
@@ -267,7 +272,8 @@ class ProjectEditorWindow(QDialog):
             QMessageBox.information(self, "Builder", "El proceso necesita un nombre.")
             return
         self.proc.name = name
-        self.proc.description = self.edt_desc.toPlainText().strip()
+        # store HTML so formatting is kept
+        self.proc.description = self.edt_desc.toHtml().strip()
         self.accept()
     
     def _on_list_context_menu(self, pos):
