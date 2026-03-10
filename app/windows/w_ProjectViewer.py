@@ -4,9 +4,10 @@ import sys, os,  subprocess, webbrowser
 from pathlib import Path
 
 from PySide6.QtCore import  QTimer
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QFrame, QTextEdit, QFileDialog, QMessageBox)
+    QScrollArea, QFrame, QTextEdit, QFileDialog, QMessageBox, QComboBox)
 
 from app.models.project_models import ProcessDef, ScriptItem, CopierItem
 
@@ -26,31 +27,77 @@ class ProjectViewWindow(QMainWindow):
         root = QHBoxLayout(central); root.setContentsMargins(12,12,12,12); root.setSpacing(10)
 
         # ==== Left: Description + scripts + output ====
-        left = QVBoxLayout(); left.setSpacing(8)
+        left = QVBoxLayout(); left.setSpacing(4)  # less gap between sections
         title = QLabel(proc.name); title.setObjectName("RunTitle")
 
-        # ===== Left: botones para edición de texto ==========
+        # ===== Left: title and botones para edición de texto ==========
+        title = QLabel(proc.name); title.setObjectName("RunTitle")
+        left.addWidget(title)
 
-        TextEditHeader = QHBoxLayout()
+        # enmarcamos los controles en un QFrame para separarlos visualmente
+        header_frame = QFrame()
+        header_frame.setFrameShape(QFrame.StyledPanel)
+        header_frame.setFrameShadow(QFrame.Raised)
+        header_layout = QHBoxLayout(header_frame)
+        header_layout.setContentsMargins(6,4,6,4)
+        header_layout.setSpacing(8)
+
+        # text formatting controls
+        btn_bold = QPushButton("N")  # Negrita
+        # show bold letter on button itself
+        bold_font = QFont()
+        bold_font.setBold(True)
+        btn_bold.setFont(bold_font)
+        btn_bold.setCheckable(True)
+        btn_bold.setToolTip("Negrita / Bold")
+        btn_bold.clicked.connect(self._toggle_bold)
+        self.btn_bold = btn_bold
+        header_layout.addWidget(btn_bold)
+
+        # size selector (simple dropdown with few point sizes)
+        self.size_selector = QComboBox()
+        for sz in (8, 12, 16, 20):
+            self.size_selector.addItem(str(sz))
+        self.size_selector.setToolTip("Tamaño de texto / Font size")
+        # use text-based signal since activated(int) is the only overload available
+        self.size_selector.currentTextChanged.connect(self._change_font_size)
+        header_layout.addWidget(self.size_selector)
+        # update formatting state when cursor moves
+        # (connect after creating QTextEdit below)
+
         btn_save = QPushButton("💾 Guardar")
         btn_save.clicked.connect(self._save_description)
-        TextEditHeader.addWidget(btn_save)
-        TextEditHeader.addStretch(8)
+        header_layout.addWidget(btn_save)
+        header_layout.addStretch(8)
+
+        # insert the frame into the left layout
+        left.addWidget(header_frame)
 
         # --- Descripción con scroll (cambio mínimo) ---
         self.desc = QTextEdit()
-        self.desc.setPlainText(proc.description)
+        # handle previously stored HTML or plain text transparently
+        try:
+            self.desc.setHtml(proc.description)
+        except Exception:
+            self.desc.setPlainText(proc.description)
         self.desc.setContentsMargins(0,0,0,0)
         self.desc.setFixedHeight(700)
+        self.desc.cursorPositionChanged.connect(self._update_format_buttons)
+        # initialize size selector to current font size
+        if hasattr(self, 'size_selector'):
+            pt = self.desc.fontPointSize()
+            if pt:
+                self.size_selector.setCurrentText(str(int(pt)))
 
         scrollDesc = QScrollArea()
         scrollDesc.setWidgetResizable(True)
         scrollDesc.setFrameShape(QFrame.NoFrame)
+        scrollDesc.setContentsMargins(0,0,0,0)
         scrollDesc.setMaximumHeight(500)  # ajusta si quieres
         scrollDesc.setWidget(self.desc)
 
         left.addWidget(title)
-        left.addLayout(TextEditHeader)
+        # header_frame added earlier above, no need for TextEditHeader layout
         left.addWidget(scrollDesc)
 
         # --- Consola compacta + toggle (cambios mínimos) ---
@@ -97,8 +144,61 @@ class ProjectViewWindow(QMainWindow):
         root.addLayout(right, 1)
 
     def _save_description(self):
-        text = self.desc.toPlainText()
-        self.proc.description = text  # actualizar el modelo en memoria
+        # capture HTML so bold and indentation are preserved
+        html = self.desc.toHtml()
+        self.proc.description = html  # actualizar el modelo en memoria
+
+        # call optional callback to persist change
+        if self.on_save_proc:
+            self.on_save_proc(self.proc)
+
+        if self.statusBar():
+            self.statusBar().showMessage("Descripción guardada", 2000)
+
+    def _toggle_bold(self, checked: bool = False):
+        """Toggle bold formatting for the current selection or future text."""
+        cursor = self.desc.textCursor()
+        if cursor.hasSelection():
+            fmt = cursor.charFormat()
+            current_weight = fmt.fontWeight()
+            new_weight = QFont.Bold if current_weight != QFont.Bold else QFont.Normal
+            fmt.setFontWeight(new_weight)
+            cursor.mergeCharFormat(fmt)
+        else:
+            # when there's no selection, change the widget's default weight
+            current_weight = self.desc.fontWeight()
+            new_weight = QFont.Bold if current_weight != QFont.Bold else QFont.Normal
+            self.desc.setFontWeight(new_weight)
+        # reflect state on button
+        if hasattr(self, 'btn_bold'):
+            self.btn_bold.setChecked(new_weight == QFont.Bold)
+
+    def _change_font_size(self, text: str):
+        """Change font size for selection or future typing."""
+        try:
+            size = float(text)
+        except ValueError:
+            return
+        cursor = self.desc.textCursor()
+        if cursor.hasSelection():
+            fmt = cursor.charFormat()
+            fmt.setFontPointSize(size)
+            cursor.mergeCharFormat(fmt)
+        else:
+            self.desc.setFontPointSize(size)
+        # keep combobox in sync
+        if hasattr(self, 'size_selector'):
+            self.size_selector.setCurrentText(str(int(size)))
+
+    def _update_format_buttons(self):
+        """Keep toolbar buttons in sync with current cursor format."""
+        fmt = self.desc.currentCharFormat()
+        if hasattr(self, 'btn_bold'):
+            self.btn_bold.setChecked(fmt.fontWeight() == QFont.Bold)
+        if hasattr(self, 'size_selector'):
+            pt = fmt.fontPointSize() or self.desc.fontPointSize()
+            if pt:
+                self.size_selector.setCurrentText(str(int(pt)))
 
         # Si te pasaron un callback de guardado, úsalo
         if self.on_save_proc:

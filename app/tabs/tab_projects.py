@@ -119,7 +119,12 @@ class ProjectManagerTab(QMainWindow):
         pin_icon.setVisible(is_pinned)
         header.addWidget(title); header.addStretch();header.addWidget(pin_icon)
 
-        meta = QLabel(proc.description[:120] + ("…" if len(proc.description)>120 else ""))
+        # convert possible HTML description to plain text for card preview
+        from PySide6.QtGui import QTextDocument
+        doc = QTextDocument()
+        doc.setHtml(proc.description)
+        plain_summary = doc.toPlainText()
+        meta = QLabel(plain_summary[:120] + ("…" if len(plain_summary) > 120 else ""))
         meta.setObjectName("CardMeta")
         meta.setWordWrap(True)
 
@@ -176,7 +181,17 @@ class ProjectManagerTab(QMainWindow):
     # ---- open windows ----
     def _open_runner(self, proc: ProcessDef):
         w = ProjectViewWindow(proc, parent=self)
+        # ensure modifications are written back to the database
+        w.on_save_proc = self._runner_saved
         w.show()
+
+    def _runner_saved(self, proc: ProcessDef):
+        # update in-memory db and persist
+        for i, p in enumerate(self.db.get("processes", [])):
+            if p.get("id") == proc.id:
+                self.db["processes"][i] = proc.to_dict()
+                break
+        self.projects_repo.save(self.db)
 
     def _open_builder_new(self):
         dlg = ProjectEditorWindow(parent=self)
