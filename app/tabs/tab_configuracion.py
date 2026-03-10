@@ -53,7 +53,7 @@ class ConfiguracionTab(QWidget):
         cosmetic_layout.setSpacing(12)
 
         # Theme selection section
-        theme_title = QLabel("Choose highlight color")
+        theme_title = QLabel("Elegir color de resaltado")
         theme_title.setObjectName("ThemeTitle")
         cosmetic_layout.addWidget(theme_title)
 
@@ -81,7 +81,7 @@ class ConfiguracionTab(QWidget):
         cosmetic_layout.addLayout(row)
 
         # Display mode selection section
-        mode_title = QLabel("Choose display mode")
+        mode_title = QLabel("Elegir modo de visualización")
         mode_title.setObjectName("ModeTitle")
         cosmetic_layout.addWidget(mode_title)
 
@@ -109,14 +109,14 @@ class ConfiguracionTab(QWidget):
         cosmetic_layout.addLayout(mode_row)
 
         # Save button
-        self.save_btn = QPushButton("Save")
+        self.save_btn = QPushButton("Guardar")
         self.save_btn.setObjectName("SaveBtn")
         self.save_btn.setFixedHeight(36)
         self.save_btn.clicked.connect(self._save)
         cosmetic_layout.addWidget(self.save_btn, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         # Small hint label
-        self.hint_label = QLabel(f"Saved theme: {self.selected_theme_name}, mode: {self.selected_mode}. Selection stored in config.json.")
+        self.hint_label = QLabel(f"Tema guardado: {self.selected_theme_name}, modo: {self.selected_mode}. Selección guardada en config.json.")
         self.hint_label.setObjectName("HintLabel")
         self.hint_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         cosmetic_layout.addWidget(self.hint_label)
@@ -133,7 +133,7 @@ class ConfiguracionTab(QWidget):
         user_data_layout_outer.setSpacing(12)
 
         # User data section
-        user_data_title = QLabel("User data")
+        user_data_title = QLabel("Datos de usuario")
         user_data_title.setObjectName("UserDataTitle")
         user_data_layout_outer.addWidget(user_data_title)
 
@@ -141,19 +141,19 @@ class ConfiguracionTab(QWidget):
         user_data_layout = QVBoxLayout()
         user_data_layout.setSpacing(8)
 
-        self.export_btn = QPushButton("Export my data")
+        self.export_btn = QPushButton("Exportar mis datos")
         self.export_btn.setObjectName("UserDataBtn")
         self.export_btn.setFixedHeight(32)
         self.export_btn.clicked.connect(self._export_data)
         user_data_layout.addWidget(self.export_btn)
 
-        self.delete_btn = QPushButton("Delete my data")
+        self.delete_btn = QPushButton("Eliminar mis datos")
         self.delete_btn.setObjectName("UserDataBtn")
         self.delete_btn.setFixedHeight(32)
         self.delete_btn.clicked.connect(self._delete_data)
         user_data_layout.addWidget(self.delete_btn)
 
-        self.view_btn = QPushButton("View my data")
+        self.view_btn = QPushButton("Ver mis datos")
         self.view_btn.setObjectName("UserDataBtn")
         self.view_btn.setFixedHeight(32)
         self.view_btn.clicked.connect(self._view_data)
@@ -200,7 +200,7 @@ class ConfiguracionTab(QWidget):
         for name, btn in self._buttons.items():
             if btn is button:
                 self.selected_theme_name = name
-                self.hint_label.setText(f"Saved theme: {self.selected_theme_name}, mode: {self.selected_mode}. Selection stored in config.json.")
+                self.hint_label.setText(f"Tema guardado: {self.selected_theme_name}, modo: {self.selected_mode}. Selección guardada en config.json.")
                 break
 
     def _make_mode_button(self, mode_name: str) -> QToolButton:
@@ -212,7 +212,7 @@ class ConfiguracionTab(QWidget):
         btn.setText(mode_name)
 
         # Optional: tooltip to show mode name
-        btn.setToolTip(f"{mode_name} mode")
+        btn.setToolTip(f"Modo {mode_name}")
         return btn
 
     def _on_mode_toggled(self, button: QToolButton, checked: bool):
@@ -222,30 +222,30 @@ class ConfiguracionTab(QWidget):
         for name, btn in self._mode_buttons.items():
             if btn is button:
                 self.selected_mode = name
-                self.hint_label.setText(f"Saved theme: {self.selected_theme_name}, mode: {self.selected_mode}. Selection stored in config.json.")
+                self.hint_label.setText(f"Tema guardado: {self.selected_theme_name}, modo: {self.selected_mode}. Selección guardada en config.json.")
                 break
 
     def _save(self):
         # Placeholder save functionality - just show message
-        QMessageBox.information(self, "Saved", f"Saved theme: {self.selected_theme_name}, mode: {self.selected_mode}")
+        QMessageBox.information(self, "Guardado", f"Tema guardado: {self.selected_theme_name}, modo: {self.selected_mode}")
         self.hint_label.setText(
-            f"Saved theme: {self.selected_theme_name}, mode: {self.selected_mode}. Selection stored in config.json.")
+            f"Tema guardado: {self.selected_theme_name}, modo: {self.selected_mode}. Selección guardada en config.json.")
 
     def _export_data(self):
         # Placeholder export functionality
-        QMessageBox.information(self, "Export Data", "Export functionality coming soon!\n\nThis will allow you to export all your data.")
+        QMessageBox.information(self, "Exportar Datos", "¡Funcionalidad de exportación próximamente!\n\nEsto te permitirá exportar todos tus datos.")
 
     def _delete_data(self):
         # Placeholder delete functionality with confirmation
         reply = QMessageBox.question(
-            self, "Delete Data",
-            "Are you sure you want to delete all your data?\n\nThis action cannot be undone.",
+            self, "Eliminar Datos",
+            "¿Estás seguro de que quieres eliminar todos tus datos?\n\nEsta acción no se puede deshacer.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
         if reply == QMessageBox.StandardButton.Yes:
-            QMessageBox.information(self, "Delete Data", "Delete functionality coming soon!\n\nAll your data would be permanently removed.")
+            QMessageBox.information(self, "Eliminar Datos", "¡Funcionalidad de eliminación próximamente!\n\nTodos tus datos serían eliminados permanentemente.")
 
     def _view_data(self):
         # Placeholder view functionality
-        QMessageBox.information(self, "View Data", "View functionality coming soon!\n\nThis will show you all your stored data.")
+        QMessageBox.information(self, "Ver Datos", "¡Funcionalidad de visualización próximamente!\n\nEsto te mostrará todos tus datos almacenados.")
