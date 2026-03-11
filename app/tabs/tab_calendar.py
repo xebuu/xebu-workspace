@@ -178,6 +178,25 @@ class CalendarTab(QMainWindow):
         btn_toggle.clicked.connect(lambda: self._toggle_task(task))
         btn_layout.addWidget(btn_toggle)
         
+        # Delete button
+        btn_delete = QPushButton("🗑️")
+        btn_delete.setMaximumWidth(40)
+        btn_delete.setToolTip("Eliminar tarea")
+        btn_delete.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                color: #666;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background-color: #ffebee;
+                color: #d32f2f;
+            }
+        """)
+        btn_delete.clicked.connect(lambda: self._delete_task(task))
+        btn_layout.addWidget(btn_delete)
+        
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
         
@@ -197,6 +216,29 @@ class CalendarTab(QMainWindow):
         self.tasks_repo.save(all_tasks)
         self._on_date_selected(self.selected_date)
         self._update_calendar_indicators()
+    
+    def _delete_task(self, task: dict):
+        """Delete a task from the database."""
+        from PySide6.QtWidgets import QMessageBox
+
+        # Confirm deletion
+        reply = QMessageBox.question(
+            self,
+            "Eliminar Tarea",
+            f"¿Estás seguro de que quieres eliminar la tarea:\n\n\"{task.get('tarea', 'Sin descripción')}\"?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if reply == QMessageBox.Yes:
+            # Remove task from database
+            all_tasks = self.tasks_repo.load()
+            all_tasks = [t for t in all_tasks if t.get("tarea") != task.get("tarea")]
+            self.tasks_repo.save(all_tasks)
+
+            # Refresh UI
+            self._on_date_selected(self.selected_date)
+            self._update_calendar_indicators()
     
     def _create_add_task_button(self) -> QFrame:
         """Create an elegant add task button that looks like a task item."""
