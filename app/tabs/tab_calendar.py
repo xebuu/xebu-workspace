@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 
 from PySide6.QtCore import Qt, QDate
+from PySide6.QtGui import QTextCharFormat, QColor
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QCalendarWidget, QFrame, QSizePolicy, QScrollArea, QPushButton, QMessageBox
@@ -62,6 +63,9 @@ class CalendarTab(QMainWindow):
         
         calendar_layout.addWidget(self.calendar)
         parent_layout.addWidget(calendar_frame, 1)
+        
+        # Mark dates with tasks
+        self._update_calendar_indicators()
         
     def _setup_tasks_section(self, parent_layout: QHBoxLayout):
         """Setup the tasks management section."""
@@ -188,3 +192,32 @@ class CalendarTab(QMainWindow):
         
         self.tasks_repo.save(all_tasks)
         self._on_date_selected(self.selected_date)
+        self._update_calendar_indicators()
+    
+    def _update_calendar_indicators(self):
+        """Mark dates with tasks using subtle visual indicators on the calendar."""
+        # Load all tasks from database
+        all_tasks = self.tasks_repo.load()
+        
+        # Extract unique deadline dates
+        task_dates = set()
+        for task in all_tasks:
+            deadline = task.get("deadline", "").strip()
+            if deadline:
+                try:
+                    # Validate and add to set
+                    QDate.fromString(deadline, "yyyy-MM-dd")
+                    task_dates.add(deadline)
+                except:
+                    pass
+        
+        # Create format for dates with tasks - subtle blue text
+        task_format = QTextCharFormat()
+        task_format.setForeground(QColor(72, 149, 239))  # Blue text
+        task_format.setFontWeight(700)  # Bold
+        
+        # Apply format to dates with tasks
+        for date_str in task_dates:
+            date = QDate.fromString(date_str, "yyyy-MM-dd")
+            if date.isValid():
+                self.calendar.setDateTextFormat(date, task_format)
