@@ -15,6 +15,7 @@ from PySide6.QtGui import QAction, QKeySequence, QShortcut
 # Vista interna
 from app.tabs.tab_projects import ProjectManagerTab
 from app.tabs.tab_configuracion import ConfiguracionTab
+from app.tabs.tab_calendar import CalendarTab
 from app.windows.w_bitacora import BitacoraWindow
 from app.windows.w_tasks import TasksWindow
 from app.utility.helpers import show_loading_then
@@ -109,7 +110,7 @@ class SideBar(QWidget):
         self.buttons = []
         tabs = [
             ("📝  Proyectos", 0),
-            ("🛰️  Coming Soon", 1),
+            ("🗓️  Calendario", 1),
             ("⚙️  Configuración", 2),
         ]
         for text, idx in tabs:
@@ -180,7 +181,7 @@ class MainWindow(QMainWindow):
             if idx == 0:
                 page = ProjectManagerTab()
             elif idx == 1:
-                page = self.tab_temporal("Coming Soon")
+                page = CalendarTab()
             elif idx == 2:
                 page = ConfiguracionTab()
             else:
