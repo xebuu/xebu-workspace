@@ -28,15 +28,16 @@ Features, structure, and data formats may change at any time.
 - Daily log saved as CSV
 - Custom PySide6 interface with theming
 
+### Calendar
+  - Visualize tasks in a calendar view
+  - Add/Delete Tasks 
+
 ## Planned Features
 
 - **Settings** ~March 2026
   - Theme selection
   - Dark / Light mode
   - Manage user data 
-
-- **Calendar** ~Later in 2026
-  - Visualize tasks in a calendar view
 
 ---
 
