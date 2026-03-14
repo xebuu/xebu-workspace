@@ -2,11 +2,13 @@
 from __future__ import annotations
 import os, datetime
 
+from PySide6.QtCore import QEvent
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QLabel, QPushButton,QTextEdit, QMessageBox)
+    QLabel, QPushButton, QTextEdit, QMessageBox)
 
 from app.utility.database import BitacoraRepo
+from app.utility.theme import theme_manager
 class BitacoraWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -27,8 +29,13 @@ class BitacoraWindow(QMainWindow):
         root.addWidget(title)
 
         self.edt = QTextEdit()
+        self.edt.setObjectName("BitacoraEntry")
         self.edt.setPlaceholderText("Escribe aquí tu entrada…")
+        self.edt.installEventFilter(self)
         root.addWidget(self.edt, 1)
+
+        theme_manager.theme_changed.connect(lambda _: self._update_highlight())
+        self._update_highlight()
 
         row = QHBoxLayout()
         self.btn_add = QPushButton("＋ Agregar a Bitácora")
@@ -62,3 +69,15 @@ class BitacoraWindow(QMainWindow):
             os.startfile(str(p.resolve()))
         except Exception as e:
             QMessageBox.warning(self, "Bitácora", str(e))
+
+    def eventFilter(self, obj, event):
+        if obj is self.edt and event.type() in (QEvent.FocusIn, QEvent.FocusOut):
+            self._update_highlight()
+        return super().eventFilter(obj, event)
+
+    def _update_highlight(self):
+        if self.edt.hasFocus():
+            color = theme_manager.get_color("accent", "normal")
+            self.edt.setStyleSheet(f"border-bottom: 3px solid {color};")
+        else:
+            self.edt.setStyleSheet("")
