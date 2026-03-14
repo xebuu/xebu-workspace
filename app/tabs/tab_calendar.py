@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QCalendarWidget, QFrame, QSizePolicy, QScrollArea, QPushButton, QMessageBox
 )
 from app.utility.database import TasksRepo
+from app.utility.theme import theme_manager
 
 
 class CalendarTab(QMainWindow):
@@ -60,7 +61,9 @@ class CalendarTab(QMainWindow):
         self.calendar.setGridVisible(True)
         self.calendar.setSelectedDate(QDate.currentDate())
         self.calendar.clicked.connect(self._on_date_selected)
-        
+        theme_manager.theme_changed.connect(self._apply_calendar_theme)
+        self._apply_calendar_theme()
+
         calendar_layout.addWidget(self.calendar)
         parent_layout.addWidget(calendar_frame, 1)
         
@@ -365,3 +368,18 @@ class CalendarTab(QMainWindow):
             date = QDate.fromString(date_str, "yyyy-MM-dd")
             if date.isValid():
                 self.calendar.setDateTextFormat(date, task_format)
+
+    def _apply_calendar_theme(self, theme_name: str | None = None):
+        """Apply themed colors to the navigation bar of the calendar."""
+        nav_bg = theme_manager.get_color("calendar", "nav_bar_bg")
+        nav_text = theme_manager.get_color("calendar", "nav_bar_text", fallback="#ffffff")
+        style = f"""
+            QCalendarWidget QWidget#qt_calendar_navigationbar {{
+                background-color: {nav_bg};
+            }}
+            QCalendarWidget QWidget#qt_calendar_navigationbar QToolButton {{
+                color: {nav_text};
+                border: none;
+            }}
+        """
+        self.calendar.setStyleSheet(style)

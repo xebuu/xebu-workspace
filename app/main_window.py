@@ -19,7 +19,7 @@ from app.tabs.tab_calendar import CalendarTab
 from app.windows.w_bitacora import BitacoraWindow
 from app.windows.w_tasks import TasksWindow
 from app.utility.helpers import show_loading_then
-from app.utility.paths import assets_path,assets_path_yellow
+from app.utility.paths import assets_path
 from app.utility.database import MainWindowToolbarRepo
 
 def _open_target(target: str):
@@ -205,14 +205,6 @@ class MainWindow(QMainWindow):
         menu_file.addSeparator()
         menu_file.addAction(act_exit)
 
-        style_file = mb.addMenu("Estilo")
-        act_changeStyleN = QAction("Normal",self)
-        act_changeStyleN.triggered.connect(self.apply_style)
-        act_changeStyleY = QAction("Amarillo",self)
-        act_changeStyleY.triggered.connect(self.apply_style_yellow)
-        style_file.addSeparator()
-        style_file.addAction(act_changeStyleN)
-        style_file.addAction(act_changeStyleY)
 
     def _build_toolbar(self):
         tb = QToolBar("Main")
@@ -425,10 +417,6 @@ class MainWindow(QMainWindow):
             self.setStyleSheet(f.read())
         return
 
-    def apply_style_yellow(self):
-        with open(assets_path_yellow, "r", encoding="utf-8") as f:
-            self.setStyleSheet(f.read())
-        return
     
     def tab_temporal(self, title="Coming Soon"):
         w = QWidget()

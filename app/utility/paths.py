@@ -28,7 +28,6 @@ BITACORA_CSV = appdata_dir() / "bitacora.csv"
 APP_DIR = Path(__file__).resolve().parents[1]
 ASSETS_DIR = APP_DIR / "assets"
 assets_path = ASSETS_DIR / "style.qss"
-assets_path_yellow = ASSETS_DIR / "style_yellow.qss"
 
 __all__ = [
     "APP_NAME",
@@ -42,5 +41,4 @@ __all__ = [
     "APP_DIR",
     "ASSETS_DIR",
     "assets_path",
-    "assets_path_yellow",
 ]

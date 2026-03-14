@@ -1,32 +1,13 @@
 # app/tabs/tab_configuracion.py
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QMessageBox, QButtonGroup, QToolButton, QFrame
 )
 
-THEMES = {
-    "Pink": {
-        "accent": {"normal": "#ff4fa3", "hover": "#ff77bd", "checked": "#d93d86", "text": "#ffffff"}
-    },
-    "Yellow": {
-        "accent": {"normal": "#facf4e", "hover": "#ffe08a", "checked": "#e0b83c", "text": "#111111"}
-    },
-    "Green": {
-        "accent": {"normal": "#4D8F71", "hover": "#6fb091", "checked": "#3d725a", "text": "#ffffff"}
-    },
-    "Blue": {
-        "accent": {"normal": "#46abf3", "hover": "#77c2ff", "checked": "#2d8fd6", "text": "#ffffff"}
-    },
-    "Mint": {
-        "accent": {"normal": "#91C4B9", "hover": "#b2ddd4", "checked": "#6ea89b", "text": "#111111"}
-    },
-}
+from app.utility.theme import THEME_REGISTRY, theme_manager
 
 class ConfiguracionTab(QWidget):
     def __init__(self, parent=None):
@@ -68,8 +49,8 @@ class ConfiguracionTab(QWidget):
         self._buttons: dict[str, QToolButton] = {}
         self.selected_theme_name = "Pink"  # Default
 
-        for name in ("Pink", "Yellow", "Green", "Blue", "Mint"):
-            btn = self._make_color_dot(name, THEMES[name]["accent"]["normal"])
+        for name in THEME_REGISTRY.keys():
+            btn = self._make_color_dot(name, THEME_REGISTRY[name]["accent"]["normal"])
             self.group.addButton(btn)
             self._buttons[name] = btn
             row.addWidget(btn)
@@ -201,6 +182,7 @@ class ConfiguracionTab(QWidget):
             if btn is button:
                 self.selected_theme_name = name
                 self.hint_label.setText(f"Tema guardado: {self.selected_theme_name}, modo: {self.selected_mode}. Selección guardada en config.json.")
+                theme_manager.set_theme(name)
                 break
 
     def _make_mode_button(self, mode_name: str) -> QToolButton:
