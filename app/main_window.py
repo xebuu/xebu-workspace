@@ -18,6 +18,7 @@ from app.tabs.tab_configuracion import ConfiguracionTab
 from app.tabs.tab_calendar import CalendarTab
 from app.windows.w_bitacora import BitacoraWindow
 from app.windows.w_tasks import TasksWindow
+from app.widgets.overlay_sidebar import OverlaySidebar, COLLAPSED_WIDTH
 from app.utility.helpers import show_loading_then
 from app.utility.paths import assets_path
 from app.utility.database import MainWindowToolbarRepo
@@ -84,66 +85,6 @@ class AddToolbarShortcutDialog(QDialog):
         }
 
 
-# ========= Sidebar =========
-class SideBar(QWidget):
-    def __init__(self, on_tab_selected, width_expanded=220, width_collapsed=56):
-        super().__init__()
-        self.on_tab_selected = on_tab_selected
-        self.width_expanded = width_expanded
-        self.width_collapsed = width_collapsed
-
-        self.setFixedWidth(self.width_expanded)
-        self.setObjectName("SideBar")
-
-        root = QVBoxLayout(self)
-        root.setContentsMargins(8, 8, 8, 8)
-        root.setSpacing(8)
-
-        self.toggle_btn = QPushButton("≡  Menu")
-        self.toggle_btn.setCursor(Qt.PointingHandCursor)
-        self.toggle_btn.setCheckable(True)
-        self.toggle_btn.toggled.connect(self.toggle_menu)
-        self.toggle_btn.setObjectName("ToggleBtn")
-        root.addWidget(self.toggle_btn)
-        root.addWidget(hline())
-
-        self.buttons = []
-        tabs = [
-            ("📝  Proyectos", 0),
-            ("🗓️  Calendario", 1),
-            ("⚙️  Configuración", 2),
-        ]
-        for text, idx in tabs:
-            btn = QPushButton(text)
-            btn.setCursor(Qt.PointingHandCursor)
-            btn.setCheckable(True)
-            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            btn.clicked.connect(lambda _checked=False, i=idx: self._select(i))
-            self.buttons.append(btn)
-            root.addWidget(btn)
-
-        root.addStretch()
-
-        self._anim = QPropertyAnimation(self, b"minimumWidth")
-        self._anim.setDuration(180)
-        self._anim.setEasingCurve(QEasingCurve.InOutCubic)
-        self._anim.finished.connect(lambda: self.setFixedWidth(self.minimumWidth()))
-
-        self._select(0)
-
-    def _select(self, index: int):
-        for i, b in enumerate(self.buttons):
-            b.setChecked(i == index)
-        self.on_tab_selected(index)
-
-    def toggle_menu(self, collapsed: bool):
-        target = self.width_collapsed if collapsed else self.width_expanded
-        self._anim.stop()
-        self._anim.setStartValue(self.width())
-        self._anim.setEndValue(target)
-        self._anim.start()
-
-
 # ========= Main Window =========
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -151,24 +92,32 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("XebuWorkspace 2.0.0")
         self.resize(1200, 800)
 
-        root = QWidget()
-        self.setCentralWidget(root)
-        hbox = QHBoxLayout(root)
-        hbox.setContentsMargins(0, 0, 0, 0)
-        hbox.setSpacing(0)
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        self.central_widget.update_sidebar_geometry = self.update_sidebar_geometry
+
+        content_layout = QVBoxLayout(self.central_widget)
+        content_layout.setContentsMargins(COLLAPSED_WIDTH, 0, 0, 0)
+        content_layout.setSpacing(0)
 
         self.stack = QStackedWidget()
-        self.pages = [None, None, None]  
+        self.pages = [None, None, None]
+        content_layout.addWidget(self.stack)
 
-        self.sidebar = SideBar(on_tab_selected=self.show_tab)
-        hbox.addWidget(self.sidebar)
-        hbox.addWidget(self.stack, 1)
+        self.sidebar = OverlaySidebar(parent=self.central_widget)
+        self.sidebar.page_requested.connect(self._on_sidebar_page_requested)
+        self._page_key_map = {
+            "projects": 0,
+            "calendar": 1,
+            "settings": 2,
+        }
 
         self._build_menubar()
         self._build_toolbar()
 
         self.statusBar().showMessage("Ready")
 
+        self.update_sidebar_geometry()
         self.show_tab(0)
 
         QShortcut(QKeySequence("Ctrl+R"), self, activated=self.apply_style)
@@ -194,6 +143,25 @@ class MainWindow(QMainWindow):
         elapsed = (perf_counter() - t0) * 1000
         self.statusBar().showMessage(f"Tab {idx} listo • render: {elapsed:.1f} ms")
         QTimer.singleShot(2000, self.statusBar().clearMessage)
+
+    def _on_sidebar_page_requested(self, page_key: str) -> None:
+        match_idx = self._page_key_map.get(page_key)
+        if match_idx is None:
+            return
+        self.show_tab(match_idx)
+
+    def update_sidebar_geometry(self) -> None:
+        if not hasattr(self, "sidebar"):
+            return
+
+        sidebar = self.sidebar
+        sidebar.setFixedHeight(self.central_widget.height())
+        sidebar.move(0, 0)
+        sidebar.raise_()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.update_sidebar_geometry()
 
     def _build_menubar(self):
         mb = self.menuBar()
