@@ -1,17 +1,33 @@
 # w_ProjectViewer.py
 from __future__ import annotations
-import sys, os,  subprocess, webbrowser
+
+import os
+import subprocess
+import sys
+import webbrowser
 from pathlib import Path
 
-from PySide6.QtCore import  QTimer
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QFrame, QTextEdit, QFileDialog, QMessageBox, QComboBox)
+    QComboBox,
+    QFileDialog,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
-from app.models.project_models import ProcessDef, ScriptItem, CopierItem
+from app.models.project_models import CopierItem, ProcessDef, ScriptItem
 
 # -------------------- Runner: open a process and run scripts --------------------
+
 
 class ProjectViewWindow(QMainWindow):
     def __init__(self, proc: "ProcessDef", parent=None):
@@ -21,17 +37,22 @@ class ProjectViewWindow(QMainWindow):
         self.setWindowTitle(f"Proyecto — {proc.name}")
         self.resize(1000, 640)
 
-
-        central = QWidget(); self.setCentralWidget(central)
+        central = QWidget()
+        self.setCentralWidget(central)
         central.setObjectName("ProjectViewerBackground")
-        root = QHBoxLayout(central); root.setContentsMargins(12,12,12,12); root.setSpacing(10)
+        root = QHBoxLayout(central)
+        root.setContentsMargins(12, 12, 12, 12)
+        root.setSpacing(10)
 
         # ==== Left: Description + scripts + output ====
-        left = QVBoxLayout(); left.setSpacing(4)  # less gap between sections
-        title = QLabel(proc.name); title.setObjectName("RunTitle")
+        left = QVBoxLayout()
+        left.setSpacing(4)  # less gap between sections
+        title = QLabel(proc.name)
+        title.setObjectName("RunTitle")
 
         # ===== Left: title and botones para edición de texto ==========
-        title = QLabel(proc.name); title.setObjectName("RunTitle")
+        title = QLabel(proc.name)
+        title.setObjectName("RunTitle")
         left.addWidget(title)
 
         # enmarcamos los controles en un QFrame para separarlos visualmente
@@ -39,7 +60,7 @@ class ProjectViewWindow(QMainWindow):
         header_frame.setFrameShape(QFrame.StyledPanel)
         header_frame.setFrameShadow(QFrame.Raised)
         header_layout = QHBoxLayout(header_frame)
-        header_layout.setContentsMargins(6,4,6,4)
+        header_layout.setContentsMargins(6, 4, 6, 4)
         header_layout.setSpacing(8)
 
         # text formatting controls
@@ -80,11 +101,11 @@ class ProjectViewWindow(QMainWindow):
             self.desc.setHtml(proc.description)
         except Exception:
             self.desc.setPlainText(proc.description)
-        self.desc.setContentsMargins(0,0,0,0)
+        self.desc.setContentsMargins(0, 0, 0, 0)
         self.desc.setFixedHeight(700)
         self.desc.cursorPositionChanged.connect(self._update_format_buttons)
         # initialize size selector to current font size
-        if hasattr(self, 'size_selector'):
+        if hasattr(self, "size_selector"):
             pt = self.desc.fontPointSize()
             if pt:
                 self.size_selector.setCurrentText(str(int(pt)))
@@ -92,7 +113,7 @@ class ProjectViewWindow(QMainWindow):
         scrollDesc = QScrollArea()
         scrollDesc.setWidgetResizable(True)
         scrollDesc.setFrameShape(QFrame.NoFrame)
-        scrollDesc.setContentsMargins(0,0,0,0)
+        scrollDesc.setContentsMargins(0, 0, 0, 0)
         scrollDesc.setMaximumHeight(500)  # ajusta si quieres
         scrollDesc.setWidget(self.desc)
 
@@ -109,16 +130,19 @@ class ProjectViewWindow(QMainWindow):
         self.out.setPlaceholderText("Salida del proceso…")
         self.out.setMaximumHeight(220)  # hace la consola más pequeña
 
-        toggle_console.toggled.connect(lambda on: (
-            self.out.setVisible(not on),
-            toggle_console.setText("Mostrar consola" if on else "Ocultar consola")
-        ))
+        toggle_console.toggled.connect(
+            lambda on: (
+                self.out.setVisible(not on),
+                toggle_console.setText("Mostrar consola" if on else "Ocultar consola"),
+            )
+        )
 
         left.addWidget(toggle_console)
         left.addWidget(self.out, 0)  # sin stretch para respetar el máximo de altura
 
         # Right: links + copiers
-        right = QVBoxLayout(); right.setSpacing(8)
+        right = QVBoxLayout()
+        right.setSpacing(8)
         right.addWidget(self._hlabel("Accesos"))
         for lk in proc.links:
             btn = QPushButton(f"🔗 {lk.title}")
@@ -170,7 +194,7 @@ class ProjectViewWindow(QMainWindow):
             new_weight = QFont.Bold if current_weight != QFont.Bold else QFont.Normal
             self.desc.setFontWeight(new_weight)
         # reflect state on button
-        if hasattr(self, 'btn_bold'):
+        if hasattr(self, "btn_bold"):
             self.btn_bold.setChecked(new_weight == QFont.Bold)
 
     def _change_font_size(self, text: str):
@@ -187,15 +211,15 @@ class ProjectViewWindow(QMainWindow):
         else:
             self.desc.setFontPointSize(size)
         # keep combobox in sync
-        if hasattr(self, 'size_selector'):
+        if hasattr(self, "size_selector"):
             self.size_selector.setCurrentText(str(int(size)))
 
     def _update_format_buttons(self):
         """Keep toolbar buttons in sync with current cursor format."""
         fmt = self.desc.currentCharFormat()
-        if hasattr(self, 'btn_bold'):
+        if hasattr(self, "btn_bold"):
             self.btn_bold.setChecked(fmt.fontWeight() == QFont.Bold)
-        if hasattr(self, 'size_selector'):
+        if hasattr(self, "size_selector"):
             pt = fmt.fontPointSize() or self.desc.fontPointSize()
             if pt:
                 self.size_selector.setCurrentText(str(int(pt)))
@@ -209,16 +233,22 @@ class ProjectViewWindow(QMainWindow):
             self.statusBar().showMessage("Descripción guardada", 2000)
 
     def _hlabel(self, text) -> QLabel:
-        lbl = QLabel(text); lbl.setStyleSheet("color:#cfd6d6; font-weight:700;")
+        lbl = QLabel(text)
+        lbl.setStyleSheet("color:#cfd6d6; font-weight:700;")
         return lbl
 
     def _script_row(self, s: "ScriptItem") -> QWidget:
-        w = QFrame(); h = QVBoxLayout(w) if False else QHBoxLayout(w)
-        h.setContentsMargins(0,0,0,0); h.setSpacing(6)
-        lbl = QLabel(f"{Path(s.path).name}  {s.args}".strip()); lbl.setToolTip(s.path)
-        btn = QPushButton("▶️ Run"); btn.setObjectName("Run")
+        w = QFrame()
+        h = QVBoxLayout(w) if False else QHBoxLayout(w)
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(6)
+        lbl = QLabel(f"{Path(s.path).name}  {s.args}".strip())
+        lbl.setToolTip(s.path)
+        btn = QPushButton("▶️ Run")
+        btn.setObjectName("Run")
         btn.clicked.connect(lambda: self._run_script(s))
-        h.addWidget(lbl, 1); h.addWidget(btn)
+        h.addWidget(lbl, 1)
+        h.addWidget(btn)
         return w
 
     def _run_script(self, s: "ScriptItem"):
@@ -232,7 +262,7 @@ class ProjectViewWindow(QMainWindow):
                 cwd=s.workdir or None,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                text=True
+                text=True,
             )
         except Exception as e:
             QMessageBox.critical(self, "Run", str(e))
@@ -251,7 +281,7 @@ class ProjectViewWindow(QMainWindow):
 
     def _open(self, target: str):
         try:
-            if target.lower().startswith(("http://","https://")):
+            if target.lower().startswith(("http://", "https://")):
                 webbrowser.open(target)
             else:
                 os.startfile(target)
@@ -261,7 +291,9 @@ class ProjectViewWindow(QMainWindow):
     def _runner_copy(self, cp: "CopierItem"):
         target_dir = Path(cp.target_dir).expanduser()
         if not target_dir:
-            QMessageBox.warning(self, "Copiar", "Este copiador no tiene carpeta destino.")
+            QMessageBox.warning(
+                self, "Copiar", "Este copiador no tiene carpeta destino."
+            )
             return
         target_dir.mkdir(parents=True, exist_ok=True)
         history_dir = Path(cp.history_dir).expanduser() if cp.history_dir else None
@@ -269,13 +301,16 @@ class ProjectViewWindow(QMainWindow):
             history_dir.mkdir(parents=True, exist_ok=True)
 
         filt = f"{cp.pattern};;Todos (*.*)" if cp.pattern else "Todos (*.*)"
-        file_path, _ = QFileDialog.getOpenFileName(self, "Seleccionar archivo a copiar", str(Path.home()), filt)
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Seleccionar archivo a copiar", str(Path.home()), filt
+        )
         if not file_path:
             return
 
         try:
             import shutil
             from datetime import datetime
+
             if history_dir:
                 for archivo in target_dir.glob(cp.pattern or "*.*"):
                     destino = history_dir / archivo.name
@@ -285,6 +320,10 @@ class ProjectViewWindow(QMainWindow):
                         destino = history_dir / f"{base}_{ts}{ext}"
                     shutil.move(str(archivo), str(destino))
             shutil.copy2(file_path, target_dir / Path(file_path).name)
-            QMessageBox.information(self, "Copiar", "Archivo movido a histórico (si aplica) y copiado al destino ✅")
+            QMessageBox.information(
+                self,
+                "Copiar",
+                "Archivo movido a histórico (si aplica) y copiado al destino ✅",
+            )
         except Exception as e:
             QMessageBox.critical(self, "Copiar", f"Error: {e}")

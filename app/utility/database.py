@@ -1,10 +1,18 @@
 from __future__ import annotations
 
-import json, csv, datetime, uuid
+import csv
+import datetime
+import json
+import uuid
 from typing import Any, Dict, List, Tuple
 
-from app.utility.paths import (ACTIVE_TASKS_JSON, ARCHIVED_TASKS_CSV, 
-                               BITACORA_CSV, FILES_JSON, TOOLBAR_JSON)
+from app.utility.paths import (
+    ACTIVE_TASKS_JSON,
+    ARCHIVED_TASKS_CSV,
+    BITACORA_CSV,
+    FILES_JSON,
+    TOOLBAR_JSON,
+)
 
 
 class TasksRepo:
@@ -27,7 +35,9 @@ class TasksRepo:
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(json.dumps(tasks, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    def reset_daily_if_needed(self, tasks: List[Dict[str, Any]], today: datetime.date | None = None) -> bool:
+    def reset_daily_if_needed(
+        self, tasks: List[Dict[str, Any]], today: datetime.date | None = None
+    ) -> bool:
         """Resets daily tasks if last update != today. Returns True if changes were made."""
         hoy = today or datetime.date.today()
         changed = False
@@ -44,7 +54,14 @@ class TasksRepo:
 class ArchivedTasksRepo:
     """Archived tasks stored in ARCHIVED_TASKS_CSV."""
 
-    HEADER = ["Tarea", "Completado", "Diaria", "Última actualización", "Deadline", "Prioridad"]
+    HEADER = [
+        "Tarea",
+        "Completado",
+        "Diaria",
+        "Última actualización",
+        "Deadline",
+        "Prioridad",
+    ]
 
     def append_task(self, task: Dict[str, Any]) -> Tuple[bool, str]:
         """
@@ -60,21 +77,25 @@ class ArchivedTasksRepo:
                 w = csv.writer(f)
                 if newfile:
                     w.writerow(self.HEADER)
-                w.writerow([
-                    task.get("tarea", ""),
-                    task.get("completado", False),
-                    task.get("diaria", False),
-                    task.get("ultima_actualizacion", ""),
-                    task.get("deadline", ""),
-                    task.get("prioridad", ""),
-                ])
+                w.writerow(
+                    [
+                        task.get("tarea", ""),
+                        task.get("completado", False),
+                        task.get("diaria", False),
+                        task.get("ultima_actualizacion", ""),
+                        task.get("deadline", ""),
+                        task.get("prioridad", ""),
+                    ]
+                )
             return True, ""
         except Exception as e:
             return False, str(e)
 
+
 class BitacoraRepo:
 
     HEADERS = ["Fecha", "Entrada", "Hora"]
+
     def ensure_headers(self) -> None:
         p = BITACORA_CSV
         if not p.exists():
@@ -93,10 +114,11 @@ class BitacoraRepo:
             return True, ""
         except Exception as e:
             return False, str(e)
-        
+
     def path(self):
         self.ensure_headers
-        return BITACORA_CSV 
+        return BITACORA_CSV
+
 
 class ProjectsRepo:
     """Processes/projects database stored in FILES_JSON."""
@@ -105,7 +127,9 @@ class ProjectsRepo:
         FILES_JSON.parent.mkdir(parents=True, exist_ok=True)
         if not FILES_JSON.exists():
             FILES_JSON.write_text(
-                json.dumps({"processes": [], "tasks": []}, indent=2, ensure_ascii=False),
+                json.dumps(
+                    {"processes": [], "tasks": []}, indent=2, ensure_ascii=False
+                ),
                 encoding="utf-8",
             )
 
@@ -154,6 +178,8 @@ class ProjectsRepo:
             json.dumps(obj, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
+
+
 class MainWindowToolbarRepo:
     """Toolbar items stored in TOOLBAR_JSON as {"items": [ ... ]}"""
 
@@ -162,7 +188,7 @@ class MainWindowToolbarRepo:
         if not TOOLBAR_JSON.exists():
             TOOLBAR_JSON.write_text(
                 json.dumps({"items": []}, indent=2, ensure_ascii=False),
-                encoding="utf-8"
+                encoding="utf-8",
             )
 
     def load(self) -> Dict[str, Any]:
@@ -204,7 +230,9 @@ class MainWindowToolbarRepo:
 
     def save(self, data: Dict[str, Any]) -> None:
         TOOLBAR_JSON.parent.mkdir(parents=True, exist_ok=True)
-        TOOLBAR_JSON.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+        TOOLBAR_JSON.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
 
     # ---- convenience API (so UI stays thin) ----
 
@@ -213,7 +241,12 @@ class MainWindowToolbarRepo:
 
     def add_item(self, title: str, target: str, kind: str = "link") -> Dict[str, Any]:
         db = self.load()
-        item = {"id": str(uuid.uuid4()), "title": title.strip() or "Acceso", "target": target.strip(), "kind": kind}
+        item = {
+            "id": str(uuid.uuid4()),
+            "title": title.strip() or "Acceso",
+            "target": target.strip(),
+            "kind": kind,
+        }
         db["items"].append(item)
         self.save(db)
         return item

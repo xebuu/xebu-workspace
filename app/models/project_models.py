@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass, asdict, field
-from typing import Optional, List
+from dataclasses import asdict, dataclass, field
+from typing import List, Optional
 
 
 @dataclass
@@ -50,7 +50,7 @@ class ProcessDef:
             id=d.get("id", str(uuid.uuid4())),
             name=d.get("name", "Sin nombre"),
             description=d.get("description", ""),
-            is_pinned=d.get("is_pinned",False),
+            is_pinned=d.get("is_pinned", False),
             scripts=[ScriptItem(**s) for s in d.get("scripts", [])],
             links=[LinkItem(**l) for l in d.get("links", [])],
             copiers=[CopierItem(**c) for c in raw_copiers],
@@ -60,7 +60,7 @@ class ProcessDef:
         return {
             "id": self.id,
             "name": self.name,
-            "is_pinned":self.is_pinned,
+            "is_pinned": self.is_pinned,
             "description": self.description,
             "scripts": [asdict(s) for s in self.scripts],
             "links": [asdict(l) for l in self.links],

@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict
-
 from PySide6.QtCore import QObject, Signal
-
 
 THEME_REGISTRY: dict[str, dict[str, dict[str, str]]] = {
     "Pink": {
@@ -74,7 +71,11 @@ class ThemeManager(QObject):
 
     def __init__(self, default_theme: str = "Pink"):
         super().__init__()
-        self._current_theme = default_theme if default_theme in THEME_REGISTRY else next(iter(THEME_REGISTRY))
+        self._current_theme = (
+            default_theme
+            if default_theme in THEME_REGISTRY
+            else next(iter(THEME_REGISTRY))
+        )
 
     @property
     def current_theme(self) -> str:

@@ -1,27 +1,46 @@
 # app/main.py
-import sys, webbrowser, os, uuid
-from time import perf_counter
+import os
+import sys
+import uuid
+import webbrowser
 from pathlib import Path
+from time import perf_counter
 
-from PySide6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer, QSize
-from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QStackedWidget, QSizePolicy, QFrame, QToolBar,  QMenu,  QSizePolicy,
-    QLineEdit, QDialogButtonBox, QLabel,QMessageBox,QFileDialog, QDialog, QToolButton,
-    QInputDialog)
-
+from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QFrame,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QPushButton,
+    QSizePolicy,
+    QStackedWidget,
+    QToolBar,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
+
+from app.tabs.tab_calendar import CalendarTab
+from app.tabs.tab_configuracion import ConfiguracionTab
 
 # Vista interna
 from app.tabs.tab_projects import ProjectManagerTab
-from app.tabs.tab_configuracion import ConfiguracionTab
-from app.tabs.tab_calendar import CalendarTab
+from app.utility.database import MainWindowToolbarRepo
+from app.utility.paths import assets_path
+from app.widgets.overlay_sidebar import COLLAPSED_WIDTH, OverlaySidebar
 from app.windows.w_bitacora import BitacoraWindow
 from app.windows.w_tasks import TasksWindow
-from app.widgets.overlay_sidebar import OverlaySidebar, COLLAPSED_WIDTH
-from app.utility.helpers import show_loading_then
-from app.utility.paths import assets_path
-from app.utility.database import MainWindowToolbarRepo
+
 
 def _open_target(target: str):
     try:
@@ -31,13 +50,16 @@ def _open_target(target: str):
             os.startfile(target)
     except Exception as e:
         from PySide6.QtWidgets import QMessageBox
+
         QMessageBox.warning(None, "Abrir", str(e))
+
 
 def hline() -> QFrame:
     line = QFrame()
     line.setFrameShape(QFrame.HLine)
     line.setFrameShadow(QFrame.Sunken)
     return line
+
 
 class AddToolbarShortcutDialog(QDialog):
     def __init__(self, parent=None):
@@ -47,34 +69,49 @@ class AddToolbarShortcutDialog(QDialog):
         self.resize(420, 180)
 
         root = QVBoxLayout(self)
-        form = QVBoxLayout(); root.addLayout(form)
+        form = QVBoxLayout()
+        root.addLayout(form)
 
-        self.edt_title = QLineEdit(); self.edt_title.setPlaceholderText("Título (p.ej. Directorio Bimbo)")
-        form.addWidget(QLabel("Título")); form.addWidget(self.edt_title)
+        self.edt_title = QLineEdit()
+        self.edt_title.setPlaceholderText("Título (p.ej. Directorio Bimbo)")
+        form.addWidget(QLabel("Título"))
+        form.addWidget(self.edt_title)
 
         row = QHBoxLayout()
-        self.edt_target = QLineEdit(); self.edt_target.setPlaceholderText("URL o ruta")
-        btn = QPushButton("Buscar…"); btn.clicked.connect(self._browse_any)
-        row.addWidget(self.edt_target, 1); row.addWidget(btn)
-        form.addWidget(QLabel("Destino")); form.addLayout(row)
+        self.edt_target = QLineEdit()
+        self.edt_target.setPlaceholderText("URL o ruta")
+        btn = QPushButton("Buscar…")
+        btn.clicked.connect(self._browse_any)
+        row.addWidget(self.edt_target, 1)
+        row.addWidget(btn)
+        form.addWidget(QLabel("Destino"))
+        form.addLayout(row)
 
         btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        btns.accepted.connect(self._on_accept); btns.rejected.connect(self.reject)
+        btns.accepted.connect(self._on_accept)
+        btns.rejected.connect(self.reject)
         root.addWidget(btns)
 
     def _browse_any(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Elegir archivo (o Cancela para carpeta)", str(Path.home()))
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Elegir archivo (o Cancela para carpeta)", str(Path.home())
+        )
         if path:
-            self.edt_target.setText(path); return
-        folder = QFileDialog.getExistingDirectory(self, "Elegir carpeta", str(Path.home()))
+            self.edt_target.setText(path)
+            return
+        folder = QFileDialog.getExistingDirectory(
+            self, "Elegir carpeta", str(Path.home())
+        )
         if folder:
             self.edt_target.setText(folder)
 
     def _on_accept(self):
         if not self.edt_title.text().strip():
-            QMessageBox.warning(self, "Acceso", "Escribe un título."); return
+            QMessageBox.warning(self, "Acceso", "Escribe un título.")
+            return
         if not self.edt_target.text().strip():
-            QMessageBox.warning(self, "Acceso", "Escribe una URL o ruta."); return
+            QMessageBox.warning(self, "Acceso", "Escribe una URL o ruta.")
+            return
         self.accept()
 
     def result_item(self) -> dict:
@@ -173,7 +210,6 @@ class MainWindow(QMainWindow):
         menu_file.addSeparator()
         menu_file.addAction(act_exit)
 
-
     def _build_toolbar(self):
         tb = QToolBar("Main")
         tb.setIconSize(QSize(18, 18))
@@ -191,10 +227,11 @@ class MainWindow(QMainWindow):
         tb.addAction(act_add)
 
         # separador expansible para empujar a la derecha el resto (opcional)
-        spacer = QWidget(); spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         tb.addWidget(spacer)
 
-            # Botón Bitácora (nuevo)
+        # Botón Bitácora (nuevo)
         act_bitacora = QAction("Bitácora", self)
         act_bitacora.triggered.connect(self._open_bitacora)
         tb.addAction(act_bitacora)
@@ -222,12 +259,16 @@ class MainWindow(QMainWindow):
         if not hasattr(self, "_bitacora_win") or self._bitacora_win is None:
             self._bitacora_win = BitacoraWindow(self)
             # cuando se cierre, olvida el puntero
-            self._bitacora_win.destroyed.connect(lambda: setattr(self, "_bitacora_win", None))
+            self._bitacora_win.destroyed.connect(
+                lambda: setattr(self, "_bitacora_win", None)
+            )
         self._bitacora_win.show()
         self._bitacora_win.raise_()
         self._bitacora_win.activateWindow()
 
-    def _toolbar_add_action_from_item(self, tb: QToolBar, item: dict, insert_before_spacer: bool = False):
+    def _toolbar_add_action_from_item(
+        self, tb: QToolBar, item: dict, insert_before_spacer: bool = False
+    ):
         """
         Crea una QAction para un item {'id','title','target'} y la inserta en la toolbar.
         Con menú contextual (clic derecho) para eliminar.
@@ -241,7 +282,9 @@ class MainWindow(QMainWindow):
         btn.setDefaultAction(act)
         btn.setPopupMode(QToolButton.InstantPopup)
         btn.setContextMenuPolicy(Qt.CustomContextMenu)
-        btn.customContextMenuRequested.connect(lambda pos, bid=item["id"]: self._toolbar_item_context_menu(bid, btn))
+        btn.customContextMenuRequested.connect(
+            lambda pos, bid=item["id"]: self._toolbar_item_context_menu(bid, btn)
+        )
 
         # Inserta la acción como widget (así podemos tener menú contextual)
         if insert_before_spacer:
@@ -251,7 +294,6 @@ class MainWindow(QMainWindow):
             tb.addWidget(btn)
 
         self._toolbar_buttons[item["id"]] = act
-
 
     def _on_toolbar_add_item(self):
         dlg = AddToolbarShortcutDialog(self)
@@ -266,8 +308,9 @@ class MainWindow(QMainWindow):
         self._toolbar_db = db
 
         # crea botón en runtime (antes del spacer)
-        self._toolbar_add_action_from_item(self.toolbar, item, insert_before_spacer=True)
-        
+        self._toolbar_add_action_from_item(
+            self.toolbar, item, insert_before_spacer=True
+        )
 
     def _toolbar_item_context_menu(self, item_id: str, btn: QToolButton):
         menu = QMenu(self)
@@ -278,11 +321,11 @@ class MainWindow(QMainWindow):
             self._toolbar_remove_item(item_id)
         elif act == act_edit:
             self._toolbar_edit_item(item_id)
-    
+
     def _toolbar_edit_item(self, item_id: str):
         # 1) Cargar DB (caché o disco)
         db = self._toolbar_db or self.toolbar_repo.load()
-        items = db.get("items",[])
+        items = db.get("items", [])
 
         # 2) Buscar item
         itemSelected = None
@@ -293,7 +336,7 @@ class MainWindow(QMainWindow):
         if itemSelected is None:
             return
 
-        curr_title  = itemSelected.get("title", "")
+        curr_title = itemSelected.get("title", "")
         curr_target = itemSelected.get("target", "")
 
         # 2) Pedir nuevo título
@@ -302,7 +345,8 @@ class MainWindow(QMainWindow):
             "Editar botón de toolbar",
             "Título del botón:",
             QLineEdit.Normal,
-            curr_title)
+            curr_title,
+        )
         if not ok or not new_title.strip():
             return
 
@@ -312,21 +356,22 @@ class MainWindow(QMainWindow):
             "Editar botón de toolbar",
             "Destino (ruta/URL/comando):",
             QLineEdit.Normal,
-            curr_target)
+            curr_target,
+        )
         if not ok or not new_target.strip():
             return
 
-        new_title  = new_title.strip()
+        new_title = new_title.strip()
         new_target = new_target.strip()
 
         # 4) Actualizar el dict en memoria
-        itemSelected["title"]  = new_title
+        itemSelected["title"] = new_title
         itemSelected["target"] = new_target
 
         # 5) Guardar JSON (ajusta al nombre de tu función de guardado)
         self._toolbar_db = db
         self.toolbar_repo.save(db)
-        
+
         # 6) Actualizar la QAction ya existente en la barra
         act = self._toolbar_buttons.get(item_id)
         if act is not None:
@@ -349,8 +394,16 @@ class MainWindow(QMainWindow):
 
     def _toolbar_remove_item(self, item_id: str):
         # confirma
-        if QMessageBox.question(self, "Quitar acceso", "¿Eliminar este acceso de la toolbar?",
-                                QMessageBox.Yes | QMessageBox.No, QMessageBox.No) != QMessageBox.Yes:
+        if (
+            QMessageBox.question(
+                self,
+                "Quitar acceso",
+                "¿Eliminar este acceso de la toolbar?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            != QMessageBox.Yes
+        ):
             return
 
         # quita de la DB
@@ -362,7 +415,6 @@ class MainWindow(QMainWindow):
         # reconstruir toolbar (más simple/robusto que buscar y eliminar widget por widget)
         self.removeToolBar(self.toolbar)
         self._build_toolbar()
-
 
     def _refresh_current_tab(self):
         # Llama a un método refresh() si la página actual lo implementa
@@ -378,18 +430,22 @@ class MainWindow(QMainWindow):
 
     def _open_alerts(self):
         from PySide6.QtWidgets import QMessageBox
-        QMessageBox.information(self, "Acerca de", "XebuWorkspace 1.0.0\n — Desktop Productivity")
+
+        QMessageBox.information(
+            self, "Acerca de", "XebuWorkspace 1.0.0\n — Desktop Productivity"
+        )
 
     def apply_style(self):
         with open(assets_path, "r", encoding="utf-8") as f:
             self.setStyleSheet(f.read())
         return
 
-    
     def tab_temporal(self, title="Coming Soon"):
         w = QWidget()
         lay = QVBoxLayout(w)
-        lbl = QLabel(f"{title}\n\nEsta sección está en desarrollo para la versión pública.")
+        lbl = QLabel(
+            f"{title}\n\nEsta sección está en desarrollo para la versión pública."
+        )
         lbl.setAlignment(Qt.AlignCenter)
         lay.addStretch()
         lay.addWidget(lbl)
@@ -400,11 +456,12 @@ class MainWindow(QMainWindow):
 def build_main():
     return MainWindow()
 
+
 def run():
     app = QApplication(sys.argv)
     w = MainWindow()
     w.show()
-    #show_loading_then(app,build_main, duration_ms=1500, text="CustomText")
+    # show_loading_then(app,build_main, duration_ms=1500, text="CustomText")
     sys.exit(app.exec())
 
 

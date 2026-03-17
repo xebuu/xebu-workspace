@@ -1,14 +1,25 @@
 # tabs/w_bitacora.py
 from __future__ import annotations
-import os, datetime
+
+import datetime
+import os
 
 from PySide6.QtCore import QEvent
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QLabel, QPushButton, QTextEdit, QMessageBox)
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 from app.utility.database import BitacoraRepo
 from app.utility.theme import theme_manager
+
+
 class BitacoraWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -47,7 +58,6 @@ class BitacoraWindow(QMainWindow):
         row.addWidget(self.btn_open)
         root.addLayout(row)
 
-
     def _add_entry(self):
         text = (self.edt.toPlainText() or "").strip()
         if not text:
@@ -59,7 +69,7 @@ class BitacoraWindow(QMainWindow):
         if not ok:
             QMessageBox.critical(self, "Bitácora", f"Error al escribir CSV:\n{err}")
             return
-        
+
         self.edt.clear()
         self.statusBar().showMessage("Entrada agregada al CSV ✅", 1500)
 

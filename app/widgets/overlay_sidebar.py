@@ -1,12 +1,12 @@
 from functools import partial
 
 from PySide6.QtCore import (
-    QEasingCurve,
     Property,
+    QEasingCurve,
     QEvent,
     QPropertyAnimation,
-    Qt,
     QSize,
+    Qt,
     Signal,
 )
 from PySide6.QtGui import QIcon
@@ -14,10 +14,10 @@ from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QLabel,
-    QVBoxLayout,
     QPushButton,
-    QStyle,
     QSizePolicy,
+    QStyle,
+    QVBoxLayout,
 )
 
 COLLAPSED_WIDTH = 72

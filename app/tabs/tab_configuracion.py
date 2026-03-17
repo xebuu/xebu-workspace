@@ -2,8 +2,16 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QMessageBox, QButtonGroup, QToolButton, QFrame, QSizePolicy
+    QButtonGroup,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QSizePolicy,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
 )
 
 from app.utility.theme import THEME_REGISTRY, theme_manager
@@ -34,7 +42,9 @@ class ConfiguracionTab(QWidget):
 
         appearance_title = QLabel("Apariencia")
         appearance_title.setObjectName("SectionHeading")
-        appearance_title.setStyleSheet("font-size: 16px; font-weight: 700; letter-spacing: 0.2px;")
+        appearance_title.setStyleSheet(
+            "font-size: 16px; font-weight: 700; letter-spacing: 0.2px;"
+        )
         appearance_layout.addWidget(appearance_title)
 
         color_label = QLabel("Color de resaltado")
@@ -96,7 +106,9 @@ class ConfiguracionTab(QWidget):
         save_row.addStretch()
         appearance_layout.addLayout(save_row)
 
-        self.hint_label = QLabel("Selecciona un color y guarda para aplicar los cambios.")
+        self.hint_label = QLabel(
+            "Selecciona un color y guarda para aplicar los cambios."
+        )
         self.hint_label.setObjectName("HintLabel")
         self.hint_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.hint_label.setStyleSheet("color: #8cbfdd; font-weight: 600;")
@@ -114,7 +126,9 @@ class ConfiguracionTab(QWidget):
 
         user_data_title = QLabel("Datos de usuario")
         user_data_title.setObjectName("SectionHeading")
-        user_data_title.setStyleSheet("font-size: 16px; font-weight: 700; letter-spacing: 0.2px;")
+        user_data_title.setStyleSheet(
+            "font-size: 16px; font-weight: 700; letter-spacing: 0.2px;"
+        )
         user_data_layout_outer.addWidget(user_data_title)
 
         user_data_layout = QVBoxLayout()
@@ -124,7 +138,9 @@ class ConfiguracionTab(QWidget):
         self.export_btn.setObjectName("UserDataBtn")
         self.export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.export_btn.setMaximumWidth(220)
-        self.export_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.export_btn.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+        )
         self.export_btn.clicked.connect(self._export_data)
         user_data_layout.addWidget(self.export_btn)
 
@@ -140,7 +156,9 @@ class ConfiguracionTab(QWidget):
         self.delete_btn.setObjectName("UserDataBtn")
         self.delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.delete_btn.setMaximumWidth(220)
-        self.delete_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.delete_btn.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+        )
         self.delete_btn.clicked.connect(self._delete_data)
         user_data_layout.addWidget(self.delete_btn)
 
@@ -157,8 +175,7 @@ class ConfiguracionTab(QWidget):
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setFixedSize(38, 38)
         btn.setObjectName("ThemeDot")
-        btn.setStyleSheet(
-            f"""
+        btn.setStyleSheet(f"""
             QToolButton#ThemeDot {{
                 background-color: {color_hex};
                 border-radius: 19px;
@@ -170,8 +187,7 @@ class ConfiguracionTab(QWidget):
             QToolButton#ThemeDot:checked {{
                 border: 3px solid #ffffff;
             }}
-            """
-        )
+            """)
         btn.setToolTip(theme_name)
         return btn
 
@@ -182,8 +198,7 @@ class ConfiguracionTab(QWidget):
         btn.setFixedSize(100, 34)
         btn.setObjectName("ModeBtn")
         btn.setText(mode_name)
-        btn.setStyleSheet(
-            """
+        btn.setStyleSheet("""
             QToolButton#ModeBtn {
                 border: 1px solid #4b4b4b;
                 background: transparent;
@@ -204,13 +219,11 @@ class ConfiguracionTab(QWidget):
                 border-color: #6cc1ff;
                 color: #ffffff;
             }
-            """
-        )
+            """)
         return btn
 
     def _apply_button_styles(self):
-        self.save_btn.setStyleSheet(
-            """
+        self.save_btn.setStyleSheet("""
             QPushButton#SaveBtn {
                 background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 #5b8be8, stop:1 #3c71d5);
                 color: white;
@@ -223,8 +236,7 @@ class ConfiguracionTab(QWidget):
             QPushButton#SaveBtn:hover {
                 opacity: 0.9;
             }
-            """
-        )
+            """)
 
         secondary_style = """
             QPushButton#UserDataBtn {
@@ -244,8 +256,7 @@ class ConfiguracionTab(QWidget):
         for btn in (self.export_btn, self.view_btn):
             btn.setStyleSheet(secondary_style)
 
-        self.delete_btn.setStyleSheet(
-            """
+        self.delete_btn.setStyleSheet("""
             QPushButton#UserDataBtn {
                 border: 1px solid #8b3a3a;
                 border-radius: 8px;
@@ -257,8 +268,7 @@ class ConfiguracionTab(QWidget):
             QPushButton#UserDataBtn:hover {
                 background: #391e1e;
             }
-            """
-        )
+            """)
 
     def _on_theme_toggled(self, button: QToolButton, checked: bool):
         if not checked:
@@ -282,17 +292,30 @@ class ConfiguracionTab(QWidget):
         self.hint_label.setText("✔ Configuración guardada")
 
     def _export_data(self):
-        QMessageBox.information(self, "Exportar Datos", "¡Funcionalidad de exportación próximamente!\n\nEsto te permitirá exportar todos tus datos.")
+        QMessageBox.information(
+            self,
+            "Exportar Datos",
+            "¡Funcionalidad de exportación próximamente!\n\nEsto te permitirá exportar todos tus datos.",
+        )
 
     def _delete_data(self):
         reply = QMessageBox.question(
-            self, "Eliminar Datos",
+            self,
+            "Eliminar Datos",
             "¿Estás seguro de que quieres eliminar todos tus datos?\n\nEsta acción no se puede deshacer.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No
+            QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
-            QMessageBox.information(self, "Eliminar Datos", "¡Funcionalidad de eliminación próximamente!\n\nTodos tus datos serían eliminados permanentemente.")
+            QMessageBox.information(
+                self,
+                "Eliminar Datos",
+                "¡Funcionalidad de eliminación próximamente!\n\nTodos tus datos serían eliminados permanentemente.",
+            )
 
     def _view_data(self):
-        QMessageBox.information(self, "Ver Datos", "¡Funcionalidad de visualización próximamente!\n\nEsto te mostrará todos tus datos almacenados.")
+        QMessageBox.information(
+            self,
+            "Ver Datos",
+            "¡Funcionalidad de visualización próximamente!\n\nEsto te mostrará todos tus datos almacenados.",
+        )

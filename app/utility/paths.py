@@ -1,10 +1,12 @@
 from pathlib import Path
+
 from PySide6.QtCore import QStandardPaths
 
 # Directory for AppData
 
 APP_NAME = "XebuWorkspace"
-ORG_NAME = "Xebu"  
+ORG_NAME = "Xebu"
+
 
 def appdata_dir() -> Path:
     loc = QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)
@@ -12,6 +14,7 @@ def appdata_dir() -> Path:
     p = base / ORG_NAME / APP_NAME
     p.mkdir(parents=True, exist_ok=True)
     return p
+
 
 # === Tasks ===
 
@@ -24,7 +27,7 @@ ARCHIVED_TASKS_CSV = appdata_dir() / "tasks_archive.csv"
 TOOLBAR_JSON = appdata_dir() / "toolbar.json"
 BITACORA_CSV = appdata_dir() / "bitacora.csv"
 
-# XebuWorkspace V2 Paths 
+# XebuWorkspace V2 Paths
 APP_DIR = Path(__file__).resolve().parents[1]
 ASSETS_DIR = APP_DIR / "assets"
 assets_path = ASSETS_DIR / "style.qss"

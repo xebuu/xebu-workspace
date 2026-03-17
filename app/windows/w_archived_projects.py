@@ -1,20 +1,21 @@
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Optional, Any
 from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
 
 # If you're using PySide6 instead, change these imports accordingly.
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
     QHBoxLayout,
+    QLabel,
     QListWidget,
     QListWidgetItem,
-    QPushButton,
-    QLabel,
     QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
+
 
 class ArchivedProjectWindow(QWidget):
     """
@@ -69,9 +70,9 @@ class ArchivedProjectWindow(QWidget):
         # Initial load
         self.setAutoFillBackground(True)
         self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setWindowFlag(Qt.Window, True)              # force top-level window
-        self.setWindowModality(Qt.NonModal)              # optional
-        self.setAttribute(Qt.WA_DeleteOnClose, True)     # optional nice behavior
+        self.setWindowFlag(Qt.Window, True)  # force top-level window
+        self.setWindowModality(Qt.NonModal)  # optional
+        self.setAttribute(Qt.WA_DeleteOnClose, True)  # optional nice behavior
         self.refresh()
 
     # -------------------------
@@ -117,7 +118,9 @@ class ArchivedProjectWindow(QWidget):
         procs = self.db.get("processes", [])
         if not isinstance(procs, list):
             return []
-        return [p for p in procs if isinstance(p, dict) and p.get("is_archived") is True]
+        return [
+            p for p in procs if isinstance(p, dict) and p.get("is_archived") is True
+        ]
 
     def _unarchive_selected(self) -> None:
         item = self.list.currentItem()
@@ -128,13 +131,16 @@ class ArchivedProjectWindow(QWidget):
         if not proc_id:
             return
 
-        if QMessageBox.question(
-            self,
-            "Desarchivar proceso",
-            "¿Seguro que quieres desarchivar este proceso?",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
-        ) != QMessageBox.Yes:
+        if (
+            QMessageBox.question(
+                self,
+                "Desarchivar proceso",
+                "¿Seguro que quieres desarchivar este proceso?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            != QMessageBox.Yes
+        ):
             return
 
         # Delegate actual mutation + persistence to main window (recommended)
@@ -173,6 +179,3 @@ class ArchivedProjectWindow(QWidget):
         if not dt:
             return "Sin fecha"
         return dt.strftime("%Y-%m-%d %H:%M")
-
-
-
