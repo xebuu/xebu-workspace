@@ -25,18 +25,9 @@ EXPANDED_WIDTH = 220
 ANIMATION_DURATION = 180
 
 DEFAULT_NAV_ITEMS = [
-    {"text": "Proyectos", "page_key": "projects", "icon_role": QStyle.SP_DesktopIcon},
-    {
-        "text": "Calendario",
-        "page_key": "calendar",
-        "icon_role": QStyle.SP_FileDialogDetailedView,
-    },
-    {
-        "text": "Configuracion",
-        "page_key": "settings",
-        "icon_role": QStyle.SP_FileDialogContentsView,
-        "icon_theme": "preferences-system",
-    },
+    {"text": "📁 Proyectos", "page_key": "projects"},
+    {"text": "📅 Calendario", "page_key": "calendar"},
+    {"text": "⚙️ Configuracion", "page_key": "settings"},
 ]
 
 
@@ -55,6 +46,8 @@ class SidebarButton(QPushButton):
         self.full_text = text
         self.page_key = page_key
         self._expanded = True
+
+        self._collapsed_text = text.split(" ", 1)[0] if " " in text else text
 
         if icon is not None:
             self.setIcon(icon)
@@ -77,7 +70,7 @@ class SidebarButton(QPushButton):
             self.setStyleSheet("QPushButton { text-align: left; padding-left: 14px; }")
             self.setToolTip("")
         else:
-            self.setText("")
+            self.setText(self._collapsed_text)
             self.setStyleSheet("QPushButton { text-align: center; padding: 0px; }")
             self.setToolTip(self.full_text)
 
