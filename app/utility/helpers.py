@@ -1,4 +1,7 @@
 # loading_screen.py
+import os
+import sys
+
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
@@ -73,3 +76,8 @@ def show_loading_then(
         loader.close()
 
     QTimer.singleShot(duration_ms, open_main)
+
+
+def resource_path(relative_path: str) -> str:
+    base_path = getattr(sys, "_MEIPASS", os.path.abspath("."))
+    return os.path.join(base_path, relative_path)
