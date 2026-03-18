@@ -1,5 +1,5 @@
 # app/main.py
-import os
+import webbrowser
 import sys
 import uuid
 from pathlib import Path
