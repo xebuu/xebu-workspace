@@ -11,6 +11,28 @@ Features, structure, and data formats may change at any time.
 
 ---
 
+## Try it ! (Windows)
+
+You can download a pre-built version without installing Python:
+
+Go to **Releases**:  
+https://github.com/xebuu/xebu-workspace/releases
+
+1. Download the latest `.exe` file
+2. Run `XebuWorkspace.exe`
+
+### Windows Warning
+
+The app is not code-signed, so Windows may show:
+
+> "Windows protected your PC"
+
+To run:
+1. Click **More info**
+2. Click **Run anyway**
+
+---
+
 ## Features
 
 ### Project Management
