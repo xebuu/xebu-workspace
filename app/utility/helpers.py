@@ -65,7 +65,7 @@ class LoadingScreen(QWidget):
 
 
 def show_loading_then(
-    app: QApplication, build_main, duration_ms=2000, text="Preparando…"
+    _app: QApplication, build_main, duration_ms=2000, text="Preparando…"
 ):
     """Muestra loader y luego crea/enseña la ventana principal construida por build_main()."""
     loader = LoadingScreen(text)

@@ -33,5 +33,5 @@ jobs:
 
       - name: Run pylint
         run: |
-          pylint main.py app || true
+          pylint main.py app --fail-under=9.0
         

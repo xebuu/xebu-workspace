@@ -186,7 +186,7 @@ class ProjectViewWindow(QMainWindow):
         if self.statusBar():
             self.statusBar().showMessage("Descripción guardada", 2000)
 
-    def _toggle_bold(self, checked: bool = False):
+    def _toggle_bold(self, _checked: bool = False):
         """Toggle bold formatting for the current selection or future text."""
         cursor = self.desc.textCursor()
         if cursor.hasSelection():
@@ -278,8 +278,10 @@ class ProjectViewWindow(QMainWindow):
         self.out.append(f"$ {' '.join(cmd)}")
 
         def _collect():
+            out = ""
             try:
-                out, _ = proc.communicate()
+                with proc:
+                    out, _ = proc.communicate()
             except (OSError, ValueError) as e:
                 out = f"[error] {e}"
             self.out.append(out or "(sin salida)")

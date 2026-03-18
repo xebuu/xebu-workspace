@@ -2,7 +2,6 @@
 import os
 import sys
 import uuid
-import webbrowser
 from pathlib import Path
 from time import perf_counter
 
@@ -146,6 +145,7 @@ class MainWindow(QMainWindow):
         }
         self._bitacora_win = None
         self._tasks_win = None
+        self._toolbar_db = None
 
         self._build_menubar()
         self._build_toolbar()
@@ -421,8 +421,8 @@ class MainWindow(QMainWindow):
             try:
                 w.refresh()
                 self.statusBar().showMessage("Refrescado", 1500)
-            except Exception as e:
-                self.statusBar().showMessage(f"Error al refrescar: {e}", 2500)
+            except (AttributeError, ValueError, RuntimeError) as exc:
+                self.statusBar().showMessage(f"Error al refrescar: {exc}", 2500)
         else:
             self.statusBar().showMessage("Nada que refrescar aquí", 1500)
 
