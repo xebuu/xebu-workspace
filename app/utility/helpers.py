@@ -1,5 +1,6 @@
 # loading_screen.py
 import os
+import subprocess
 import sys
 import webbrowser
 
@@ -87,7 +88,11 @@ def open_resource_target(target: str) -> None:
     if normalized.lower().startswith(("http://", "https://")):
         webbrowser.open(normalized)
     else:
-        os.startfile(normalized)
+        if os.name == "nt":
+            # pylint: disable=no-member
+            os.startfile(normalized)
+        else:
+            subprocess.run(["xdg-open", normalized], check=False)
 
 
 def resource_path(relative_path: str) -> str:
