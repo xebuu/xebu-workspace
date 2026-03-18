@@ -9,6 +9,12 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QLineEdit,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QVBoxLayout,
@@ -230,7 +236,6 @@ class CalendarTab(QMainWindow):
 
     def _delete_task(self, task: dict):
         """Delete a task from the database."""
-        from PySide6.QtWidgets import QMessageBox
 
         # Confirm deletion
         reply = QMessageBox.question(
@@ -284,15 +289,6 @@ class CalendarTab(QMainWindow):
 
     def _show_add_task_dialog(self):
         """Show dialog to add a new task for the selected date."""
-        from PySide6.QtWidgets import (
-            QCheckBox,
-            QComboBox,
-            QDialog,
-            QDialogButtonBox,
-            QLineEdit,
-            QVBoxLayout,
-        )
-
         dialog = QDialog(self)
         dialog.setWindowTitle("Agregar Nueva Tarea")
         dialog.setModal(True)
@@ -335,8 +331,6 @@ class CalendarTab(QMainWindow):
         """Add the task and close the dialog."""
         task_text = task_edit.text().strip()
         if not task_text:
-            from PySide6.QtWidgets import QMessageBox
-
             QMessageBox.warning(
                 dialog, "Error", "Por favor ingresa una descripción para la tarea."
             )
@@ -373,12 +367,9 @@ class CalendarTab(QMainWindow):
         for task in all_tasks:
             deadline = task.get("deadline", "").strip()
             if deadline:
-                try:
-                    # Validate and add to set
-                    QDate.fromString(deadline, "yyyy-MM-dd")
+                date = QDate.fromString(deadline, "yyyy-MM-dd")
+                if date.isValid():
                     task_dates.add(deadline)
-                except:
-                    pass
 
         # Create format for dates with tasks - subtle blue text
         task_format = QTextCharFormat()
@@ -391,7 +382,7 @@ class CalendarTab(QMainWindow):
             if date.isValid():
                 self.calendar.setDateTextFormat(date, task_format)
 
-    def _apply_calendar_theme(self, theme_name: str | None = None):
+    def _apply_calendar_theme(self, _theme_name: str | None = None):
         """Apply themed colors to the navigation bar of the calendar."""
         nav_bg = theme_manager.get_color("calendar", "nav_bar_bg")
         nav_text = theme_manager.get_color(

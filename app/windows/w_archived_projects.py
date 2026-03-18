@@ -170,7 +170,7 @@ class ArchivedProjectWindow(QWidget):
         try:
             # Handles "YYYY-MM-DDTHH:MM:SS"
             return datetime.fromisoformat(value)
-        except Exception:
+        except ValueError:
             return None
 
     @staticmethod

@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QTextDocument
 from PySide6.QtWidgets import (
     QDialog,
     QFrame,
@@ -143,8 +144,6 @@ class ProjectManagerTab(QMainWindow):
         header.addWidget(pin_icon)
 
         # convert possible HTML description to plain text for card preview
-        from PySide6.QtGui import QTextDocument
-
         doc = QTextDocument()
         doc.setHtml(proc.description)
         plain_summary = doc.toPlainText()

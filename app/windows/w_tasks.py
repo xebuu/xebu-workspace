@@ -102,7 +102,7 @@ class _TaskRow(QFrame):
                     dias_restantes = f" ({diff} días restantes)"
                 else:
                     dias_restantes = f" (⚠ vencida hace {abs(diff)} días)"
-            except Exception:
+            except ValueError:
                 dias_restantes = " (fecha inválida)"
 
         return f"{estado} {texto}{dias_restantes}{dTxt} {icono}"
