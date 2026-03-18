@@ -1,5 +1,6 @@
 [MESSAGES CONTROL]
 disable =
+    no-name-in-module
     missing-module-docstring,
     missing-function-docstring,
     missing-class-docstring
