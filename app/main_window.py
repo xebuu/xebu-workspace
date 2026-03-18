@@ -2,7 +2,6 @@
 import os
 import sys
 import uuid
-import webbrowser
 from pathlib import Path
 from time import perf_counter
 
@@ -36,6 +35,7 @@ from app.tabs.tab_configuracion import ConfiguracionTab
 # Vista interna
 from app.tabs.tab_projects import ProjectManagerTab
 from app.utility.database import MainWindowToolbarRepo
+from app.utility.helpers import open_resource_target
 from app.utility.paths import assets_path
 from app.widgets.overlay_sidebar import COLLAPSED_WIDTH, OverlaySidebar
 from app.windows.w_bitacora import BitacoraWindow
@@ -44,13 +44,8 @@ from app.windows.w_tasks import TasksWindow
 
 def _open_target(target: str):
     try:
-        if target.lower().startswith(("http://", "https://")):
-            webbrowser.open(target)
-        else:
-            os.startfile(target)
-    except Exception as e:
-        from PySide6.QtWidgets import QMessageBox
-
+        open_resource_target(target)
+    except (OSError, webbrowser.Error) as e:
         QMessageBox.warning(None, "Abrir", str(e))
 
 
@@ -148,6 +143,9 @@ class MainWindow(QMainWindow):
             "calendar": 1,
             "settings": 2,
         }
+        self._bitacora_win = None
+        self._tasks_win = None
+        self._toolbar_db = None
 
         self._build_menubar()
         self._build_toolbar()
@@ -256,7 +254,7 @@ class MainWindow(QMainWindow):
         self.toolbar = tb  # opcional: guarda la ref
 
     def _open_bitacora(self):
-        if not hasattr(self, "_bitacora_win") or self._bitacora_win is None:
+        if self._bitacora_win is None:
             self._bitacora_win = BitacoraWindow(self)
             # cuando se cierre, olvida el puntero
             self._bitacora_win.destroyed.connect(
@@ -385,7 +383,7 @@ class MainWindow(QMainWindow):
             act.triggered.connect(lambda _=None, t=new_target: _open_target(t))
 
     def _open_tasks(self):
-        if not hasattr(self, "_tasks_win") or self._tasks_win is None:
+        if self._tasks_win is None:
             self._tasks_win = TasksWindow(self)
             self._tasks_win.destroyed.connect(lambda: setattr(self, "_tasks_win", None))
         self._tasks_win.show()
@@ -423,14 +421,12 @@ class MainWindow(QMainWindow):
             try:
                 w.refresh()
                 self.statusBar().showMessage("Refrescado", 1500)
-            except Exception as e:
-                self.statusBar().showMessage(f"Error al refrescar: {e}", 2500)
+            except (AttributeError, ValueError, RuntimeError) as exc:
+                self.statusBar().showMessage(f"Error al refrescar: {exc}", 2500)
         else:
             self.statusBar().showMessage("Nada que refrescar aquí", 1500)
 
     def _open_alerts(self):
-        from PySide6.QtWidgets import QMessageBox
-
         QMessageBox.information(
             self, "Acerca de", "XebuWorkspace 1.0.0\n — Desktop Productivity"
         )

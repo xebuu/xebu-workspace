@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMessageBox,
+    QMenu,
     QPushButton,
     QTextEdit,
     QVBoxLayout,
@@ -66,10 +67,14 @@ class ProjectEditorWindow(QDialog):
 
         self.edt_desc = QTextEdit()
         # support existing HTML or plain text descriptions
-        try:
-            self.edt_desc.setHtml(self.proc.description)
-        except Exception:
-            self.edt_desc.setPlainText(self.proc.description)
+        description = self.proc.description or ""
+        if isinstance(description, str):
+            try:
+                self.edt_desc.setHtml(description)
+            except (TypeError, ValueError):
+                self.edt_desc.setPlainText(description)
+        else:
+            self.edt_desc.setPlainText(str(description))
         self.edt_desc.setPlaceholderText(
             "Descripción del proceso (qué hace, notas, etc.)"
         )
@@ -383,8 +388,6 @@ class ProjectEditorWindow(QDialog):
         lst = self.sender()  # cuál lista abrió el menú
         if lst not in (self.lst_scripts, self.lst_links, self.lst_copiers):
             return
-        from PySide6.QtWidgets import QMenu
-
         menu = QMenu(self)
 
         # Determina el tipo

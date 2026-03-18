@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import webbrowser
+from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import QTimer
@@ -25,6 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.models.project_models import CopierItem, ProcessDef, ScriptItem
+from app.utility.helpers import open_resource_target
 
 # -------------------- Runner: open a process and run scripts --------------------
 
@@ -97,10 +100,14 @@ class ProjectViewWindow(QMainWindow):
         # --- Descripción con scroll (cambio mínimo) ---
         self.desc = QTextEdit()
         # handle previously stored HTML or plain text transparently
-        try:
-            self.desc.setHtml(proc.description)
-        except Exception:
-            self.desc.setPlainText(proc.description)
+        description = proc.description or ""
+        if isinstance(description, str):
+            try:
+                self.desc.setHtml(description)
+            except (TypeError, ValueError):
+                self.desc.setPlainText(description)
+        else:
+            self.desc.setPlainText(str(description))
         self.desc.setContentsMargins(0, 0, 0, 0)
         self.desc.setFixedHeight(700)
         self.desc.cursorPositionChanged.connect(self._update_format_buttons)
@@ -179,7 +186,7 @@ class ProjectViewWindow(QMainWindow):
         if self.statusBar():
             self.statusBar().showMessage("Descripción guardada", 2000)
 
-    def _toggle_bold(self, checked: bool = False):
+    def _toggle_bold(self, _checked: bool = False):
         """Toggle bold formatting for the current selection or future text."""
         cursor = self.desc.textCursor()
         if cursor.hasSelection():
@@ -264,16 +271,18 @@ class ProjectViewWindow(QMainWindow):
                 stderr=subprocess.STDOUT,
                 text=True,
             )
-        except Exception as e:
+        except OSError as e:
             QMessageBox.critical(self, "Run", str(e))
             return
 
         self.out.append(f"$ {' '.join(cmd)}")
 
         def _collect():
+            out = ""
             try:
-                out, _ = proc.communicate()
-            except Exception as e:
+                with proc:
+                    out, _ = proc.communicate()
+            except (OSError, ValueError) as e:
                 out = f"[error] {e}"
             self.out.append(out or "(sin salida)")
 
@@ -281,11 +290,8 @@ class ProjectViewWindow(QMainWindow):
 
     def _open(self, target: str):
         try:
-            if target.lower().startswith(("http://", "https://")):
-                webbrowser.open(target)
-            else:
-                os.startfile(target)
-        except Exception as e:
+            open_resource_target(target)
+        except (OSError, webbrowser.Error) as e:
             QMessageBox.warning(self, "Abrir", str(e))
 
     def _runner_copy(self, cp: "CopierItem"):
@@ -308,9 +314,6 @@ class ProjectViewWindow(QMainWindow):
             return
 
         try:
-            import shutil
-            from datetime import datetime
-
             if history_dir:
                 for archivo in target_dir.glob(cp.pattern or "*.*"):
                     destino = history_dir / archivo.name
@@ -325,5 +328,5 @@ class ProjectViewWindow(QMainWindow):
                 "Copiar",
                 "Archivo movido a histórico (si aplica) y copiado al destino ✅",
             )
-        except Exception as e:
+        except OSError as e:
             QMessageBox.critical(self, "Copiar", f"Error: {e}")

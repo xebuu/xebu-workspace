@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import datetime
-import os
 
 from PySide6.QtCore import QEvent
 from PySide6.QtWidgets import (
@@ -16,6 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.utility.helpers import open_resource_target
 from app.utility.database import BitacoraRepo
 from app.utility.theme import theme_manager
 
@@ -76,8 +76,8 @@ class BitacoraWindow(QMainWindow):
     def _open_csv(self):
         p = self.bitacora_repo.path()
         try:
-            os.startfile(str(p.resolve()))
-        except Exception as e:
+            open_resource_target(str(p.resolve()))
+        except OSError as e:
             QMessageBox.warning(self, "Bitácora", str(e))
 
     def eventFilter(self, obj, event):

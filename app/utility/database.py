@@ -27,7 +27,7 @@ class TasksRepo:
         try:
             data = json.loads(p.read_text(encoding="utf-8")) or []
             return data if isinstance(data, list) else []
-        except Exception:
+        except json.JSONDecodeError:
             return []
 
     def save(self, tasks: List[Dict[str, Any]]) -> None:
@@ -88,7 +88,7 @@ class ArchivedTasksRepo:
                     ]
                 )
             return True, ""
-        except Exception as e:
+        except OSError as e:
             return False, str(e)
 
 
@@ -107,16 +107,16 @@ class BitacoraRepo:
     def append_entry(self, headers: List) -> Tuple[bool, str]:
         p = BITACORA_CSV
         try:
-            self.ensure_headers
+            self.ensure_headers()
             with p.open("a", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
                 writer.writerow(headers)
             return True, ""
-        except Exception as e:
+        except OSError as e:
             return False, str(e)
 
     def path(self):
-        self.ensure_headers
+        self.ensure_headers()
         return BITACORA_CSV
 
 
@@ -137,7 +137,7 @@ class ProjectsRepo:
         self.ensure()
         try:
             data = json.loads(FILES_JSON.read_text(encoding="utf-8")) or {}
-        except Exception:
+        except json.JSONDecodeError:
             data = {}
 
         # === Load Processes ===
@@ -196,7 +196,7 @@ class MainWindowToolbarRepo:
 
         try:
             data = json.loads(TOOLBAR_JSON.read_text(encoding="utf-8")) or {}
-        except Exception:
+        except json.JSONDecodeError:
             data = {}
 
         items = data.get("items")

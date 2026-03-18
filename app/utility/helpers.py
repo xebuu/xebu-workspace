@@ -1,6 +1,7 @@
 # loading_screen.py
 import os
 import sys
+import webbrowser
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QPainter, QPen
@@ -64,7 +65,7 @@ class LoadingScreen(QWidget):
 
 
 def show_loading_then(
-    app: QApplication, build_main, duration_ms=2000, text="Preparando…"
+    _app: QApplication, build_main, duration_ms=2000, text="Preparando…"
 ):
     """Muestra loader y luego crea/enseña la ventana principal construida por build_main()."""
     loader = LoadingScreen(text)
@@ -76,6 +77,17 @@ def show_loading_then(
         loader.close()
 
     QTimer.singleShot(duration_ms, open_main)
+
+
+def open_resource_target(target: str) -> None:
+    """Open a URL or filesystem path using the platform default handler."""
+    normalized = (target or "").strip()
+    if not normalized:
+        return
+    if normalized.lower().startswith(("http://", "https://")):
+        webbrowser.open(normalized)
+    else:
+        os.startfile(normalized)
 
 
 def resource_path(relative_path: str) -> str:
