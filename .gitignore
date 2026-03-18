@@ -1,28 +1,32 @@
-# =====================
 # Python
-# =====================
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# =====================
 # Virtual environments
-# =====================
 venv/
 .venv/
 
-# =====================
+# Build output
+build/
+dist/
+*.egg-info/
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage.xml
+htmlcov/
+
 # OS / Editor
-# =====================
 desktop.ini
 .DS_Store
 .vscode/
 .idea/
 
-# =====================
-# Local runtime data (NO versionar)
-# =====================
+# Local runtime data
 app/data/JSON/files.json
 app/data/JSON/toolbar.json
 app/data/JSON/tasks.json
@@ -32,15 +36,11 @@ app/data/input_CSV/
 app/data/input_CSV_archive/
 app/data/CSV/
 
-# =====================
-# Logs / temporales
-# =====================
+# Logs / temporal 
 *.log
 *.tmp
 
-# =====================
-# Opcional
-# =====================
+# Optional
 TODO.md
 ideas.txt
 tests/
