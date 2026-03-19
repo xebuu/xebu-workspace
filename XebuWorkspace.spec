@@ -1,7 +1,5 @@
 # XebuWorkspace.spec
-from PyInstaller.utils.hooks import collect_submodules
-
-block_cipher = None
+import sys
 
 a = Analysis(
     ['main.py'],
@@ -20,16 +18,39 @@ a = Analysis(
 
 pyz = PYZ(a.pure)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.datas,
-    [],
-    name='XebuWorkspace',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    console=False,
-)
+if sys.platform == "darwin":
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.datas,
+        [],
+        name='XebuWorkspace',
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=True,
+        console=False,
+    )
+
+    app = BUNDLE(
+        exe,
+        name='XebuWorkspace.app',
+        icon=None,
+        bundle_identifier='com.xebu.workspace',
+    )
+
+else:
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.datas,
+        [],
+        name='XebuWorkspace',
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=True,
+        console=False,
+    )

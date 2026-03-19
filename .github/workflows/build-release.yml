@@ -9,8 +9,22 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-windows:
-    runs-on: windows-2025
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2025
+            artifact_name: XebuWorkspace-windows
+            artifact_path: dist/XebuWorkspace.exe
+            release_file: dist/XebuWorkspace.exe
+
+          - os: macos-latest
+            artifact_name: XebuWorkspace-macos
+            artifact_path: dist/XebuWorkspace.dmg
+            release_file: dist/XebuWorkspace.dmg
 
     steps:
       - name: Checkout
@@ -28,21 +42,28 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build executable
+      - name: Build with PyInstaller
         run: |
           pyinstaller --noconfirm --clean XebuWorkspace.spec
 
+      - name: Create DMG
+        if: runner.os == 'macOS'
+        run: |
+          hdiutil create -volname XebuWorkspace \
+            -srcfolder dist/XebuWorkspace.app \
+            -ov -format UDZO dist/XebuWorkspace.dmg
+
       - name: Upload build artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
-          name: XebuWorkspace-windows
-          path: dist/XebuWorkspace.exe
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/XebuWorkspace.exe
+          files: ${{ matrix.release_file }}
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
         env:
