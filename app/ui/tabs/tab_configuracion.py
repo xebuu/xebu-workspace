@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.core.theme import THEME_REGISTRY, theme_manager
+from app.database.settings_repository import SettingsRepository
 
 
 class ConfiguracionTab(QWidget):
@@ -55,10 +56,14 @@ class ConfiguracionTab(QWidget):
         color_row = QHBoxLayout()
         color_row.setSpacing(12)
         color_row.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.settings_repo = SettingsRepository()
         self.group = QButtonGroup(self)
         self.group.setExclusive(True)
         self._buttons: dict[str, QToolButton] = {}
-        self.selected_theme_name = "Pink"
+        stored_theme = self.settings_repo.get("theme")
+        self.selected_theme_name = (
+            stored_theme if stored_theme in THEME_REGISTRY else "Pink"
+        )
 
         for name, palette in THEME_REGISTRY.items():
             btn = self._make_color_dot(name, palette["accent"]["normal"])
@@ -277,6 +282,7 @@ class ConfiguracionTab(QWidget):
             if btn is button:
                 self.selected_theme_name = name
                 theme_manager.set_theme(name)
+                self.settings_repo.upsert("theme", name)
                 break
 
     def _on_mode_toggled(self, button: QToolButton, checked: bool):
