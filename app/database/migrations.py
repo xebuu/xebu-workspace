@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from sqlite3 import Connection
 
-from app.database.schema import create_base_schema
+from app.database.schema import create_base_schema, create_settings_table
 
-CURRENT_SCHEMA_VERSION = 1
+CURRENT_SCHEMA_VERSION = 2
 
 
 def get_applied_version(conn: Connection) -> int:
@@ -27,7 +27,10 @@ def ensure_schema(conn: Connection) -> int:
     """Ensure the schema is fully created and return the active version."""
     create_base_schema(conn)
     current = get_applied_version(conn)
-    if current < CURRENT_SCHEMA_VERSION:
-        # future migrations would incrementally run here
-        record_schema_version(conn, CURRENT_SCHEMA_VERSION)
+    if current < 1:
+        record_schema_version(conn, 1)
+        current = 1
+    if current < 2:
+        create_settings_table(conn)
+        record_schema_version(conn, 2)
     return CURRENT_SCHEMA_VERSION
