@@ -15,9 +15,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.utility.helpers import open_resource_target
+from app.core.helpers import open_resource_target
 from app.utility.database import BitacoraRepo
-from app.utility.theme import theme_manager
+from app.core.theme import theme_manager
 
 
 class BitacoraWindow(QMainWindow):

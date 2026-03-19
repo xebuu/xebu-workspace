@@ -6,7 +6,7 @@ import json
 import uuid
 from typing import Any, Dict, List, Tuple
 
-from app.utility.paths import (
+from app.core.paths import (
     ACTIVE_TASKS_JSON,
     ARCHIVED_TASKS_CSV,
     BITACORA_CSV,

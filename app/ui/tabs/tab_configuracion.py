@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.utility.theme import THEME_REGISTRY, theme_manager
+from app.core.theme import THEME_REGISTRY, theme_manager
 
 
 class ConfiguracionTab(QWidget):

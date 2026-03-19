@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.utility.database import TasksRepo
-from app.utility.theme import theme_manager
+from app.core.theme import theme_manager
 
 
 class CalendarTab(QMainWindow):

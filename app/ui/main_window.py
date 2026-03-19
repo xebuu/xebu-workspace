@@ -29,17 +29,17 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.tabs.tab_calendar import CalendarTab
-from app.tabs.tab_configuracion import ConfiguracionTab
+from app.ui.tabs.tab_calendar import CalendarTab
+from app.ui.tabs.tab_configuracion import ConfiguracionTab
 
 # Vista interna
-from app.tabs.tab_projects import ProjectManagerTab
+from app.ui.tabs.tab_projects import ProjectManagerTab
 from app.utility.database import MainWindowToolbarRepo
-from app.utility.helpers import open_resource_target
-from app.utility.paths import assets_path
-from app.widgets.overlay_sidebar import COLLAPSED_WIDTH, OverlaySidebar
-from app.windows.w_bitacora import BitacoraWindow
-from app.windows.w_tasks import TasksWindow
+from app.core.helpers import open_resource_target
+from app.core.paths import assets_path
+from app.ui.widgets.overlay_sidebar import COLLAPSED_WIDTH, OverlaySidebar
+from app.ui.windows.w_bitacora import BitacoraWindow
+from app.ui.windows.w_tasks import TasksWindow
 
 
 def _open_target(target: str):

@@ -24,10 +24,10 @@ from PySide6.QtWidgets import (
 
 from app.models.project_models import ProcessDef
 from app.utility.database import ProjectsRepo
-from app.widgets.search_bars import ProjectSearchBar
-from app.windows.w_archived_projects import ArchivedProjectWindow
-from app.windows.w_project_editor import ProjectEditorWindow
-from app.windows.w_ProjectViewer import ProjectViewWindow
+from app.ui.widgets.search_bars import ProjectSearchBar
+from app.ui.windows.w_archived_projects import ArchivedProjectWindow
+from app.ui.windows.w_project_editor import ProjectEditorWindow
+from app.ui.windows.w_ProjectViewer import ProjectViewWindow
 
 
 # -------------------- Main: Manager window --------------------
