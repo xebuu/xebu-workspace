@@ -1,5 +1,5 @@
-from functools import lru_cache
 from pathlib import Path
+from typing import Optional
 
 from PySide6.QtCore import QStandardPaths
 
@@ -16,17 +16,53 @@ def _resolve_app_data_dir() -> Path:
     return base / ORG_NAME / APP_NAME
 
 
-@lru_cache(maxsize=1)
+def _fallback_app_data_dir() -> Path:
+    """Return a safe fallback AppData path under the repository."""
+    root = Path(__file__).resolve().parents[1] / ".appdata"
+    return root / ORG_NAME / APP_NAME
+
+
+_app_data_dir_cache: Optional[Path] = None
+
+
+def _set_app_data_dir(path: Path) -> Path:
+    global _app_data_dir_cache
+    _app_data_dir_cache = path
+    return path
+
+
+def _ensure_directory_writable(directory: Path) -> None:
+    """Attempt to write a temporary file inside the directory."""
+    test_file = directory / ".write_test"
+    try:
+        test_file.write_text("", encoding="utf-8")
+    finally:
+        try:
+            test_file.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 def get_app_data_dir() -> Path:
     """Return the AppData folder path (does not create it)."""
-    return _resolve_app_data_dir()
+    global _app_data_dir_cache
+    if _app_data_dir_cache is None:
+        _app_data_dir_cache = _resolve_app_data_dir()
+    return _app_data_dir_cache
 
 
 def ensure_app_data_dir() -> Path:
     """Ensure the AppData folder exists and return it."""
     target = get_app_data_dir()
-    target.mkdir(parents=True, exist_ok=True)
-    return target
+    try:
+        target.mkdir(parents=True, exist_ok=True)
+        _ensure_directory_writable(target)
+        return target
+    except OSError:
+        fallback = _fallback_app_data_dir()
+        fallback.mkdir(parents=True, exist_ok=True)
+        _ensure_directory_writable(fallback)
+        return _set_app_data_dir(fallback)
 
 
 def get_db_path(name: str = "xebu_workspace.db") -> Path:
