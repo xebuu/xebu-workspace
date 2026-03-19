@@ -1,3 +1,4 @@
+from functools import lru_cache
 from pathlib import Path
 
 from PySide6.QtCore import QStandardPaths
@@ -8,26 +9,63 @@ APP_NAME = "XebuWorkspace"
 ORG_NAME = "Xebu"
 
 
-def appdata_dir() -> Path:
+def _resolve_app_data_dir() -> Path:
+    """Return the AppData folder where user data should live."""
     loc = QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)
     base = Path(loc) if loc else (Path.home() / f".{APP_NAME.lower()}")
-    p = base / ORG_NAME / APP_NAME
-    p.mkdir(parents=True, exist_ok=True)
-    return p
+    return base / ORG_NAME / APP_NAME
 
 
-# === Tasks ===
+@lru_cache(maxsize=1)
+def get_app_data_dir() -> Path:
+    """Return the AppData folder path (does not create it)."""
+    return _resolve_app_data_dir()
 
-FILES_JSON = appdata_dir() / "files.json"
-ACTIVE_TASKS_JSON = appdata_dir() / "tasks.json"
-ARCHIVED_TASKS_CSV = appdata_dir() / "tasks_archive.csv"
+
+def ensure_app_data_dir() -> Path:
+    """Ensure the AppData folder exists and return it."""
+    target = get_app_data_dir()
+    target.mkdir(parents=True, exist_ok=True)
+    return target
+
+
+def get_db_path(name: str = "xebu_workspace.db") -> Path:
+    """Return a path reserved for the future SQLite database file."""
+    return ensure_app_data_dir() / name
+
+
+def get_config_path(name: str = "config.json") -> Path:
+    """Return a configuration file path inside AppData."""
+    return ensure_app_data_dir() / name
+
+
+def get_log_path(name: str = "app.log") -> Path:
+    """Return a log file path inside AppData."""
+    return ensure_app_data_dir() / name
+
+
+def get_backup_dir() -> Path:
+    """Return a dedicated backups directory inside AppData."""
+    backup_dir = ensure_app_data_dir() / "backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    return backup_dir
+
+
+# === Cached helpers ===
+
+APP_DATA_DIR = ensure_app_data_dir()
+
+
+FILES_JSON = APP_DATA_DIR / "files.json"
+ACTIVE_TASKS_JSON = APP_DATA_DIR / "tasks.json"
+ARCHIVED_TASKS_CSV = APP_DATA_DIR / "tasks_archive.csv"
 
 # === Main Window ===
 
-TOOLBAR_JSON = appdata_dir() / "toolbar.json"
-BITACORA_CSV = appdata_dir() / "bitacora.csv"
+TOOLBAR_JSON = APP_DATA_DIR / "toolbar.json"
+BITACORA_CSV = APP_DATA_DIR / "bitacora.csv"
 
-# XebuWorkspace V2 Paths
+# XebuWorkspace Paths
 APP_DIR = Path(__file__).resolve().parents[1]
 ASSETS_DIR = APP_DIR / "assets"
 assets_path = ASSETS_DIR / "style.qss"
@@ -35,7 +73,13 @@ assets_path = ASSETS_DIR / "style.qss"
 __all__ = [
     "APP_NAME",
     "ORG_NAME",
-    "appdata_dir",
+    "get_app_data_dir",
+    "ensure_app_data_dir",
+    "get_db_path",
+    "get_config_path",
+    "get_log_path",
+    "get_backup_dir",
+    "APP_DATA_DIR",
     "FILES_JSON",
     "ACTIVE_TASKS_JSON",
     "ARCHIVED_TASKS_CSV",
