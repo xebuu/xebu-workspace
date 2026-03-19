@@ -11,17 +11,18 @@ Features, structure, and data formats may change at any time.
 
 ---
 
-## Try it ! (Windows)
+## Try it ! (Windows & MacOS)
 
 You can download a pre-built version without installing Python:
 
 Go to **Releases**:  
 https://github.com/xebuu/xebu-workspace/releases
 
+### Windows
 1. Download the latest `.exe` file
 2. Run `XebuWorkspace.exe`
 
-### Windows Warning
+**Windows Warning**
 
 The app is not code-signed, so Windows may show:
 
@@ -31,6 +32,26 @@ To run:
 1. Click **More info**
 2. Click **Run anyway**
 
+
+### macOS
+1. Download the latest `.dmg` file
+2. Open the `.dmg`
+3. Drag **XebuWorkspace.app** into Applications
+4. Open the app from Applications
+
+**macOS Warning**
+
+The app is not code-signed, so macOS may block it.
+
+If you see a warning:
+
+1. Go to **System Settings → Privacy & Security**
+2. Scroll down and click **Open Anyway**
+
+Or:
+
+- Right-click the app → **Open**
+- Confirm the dialog
 ---
 
 ## Features
@@ -89,7 +110,7 @@ Please keep in mind:
 
 ### Requirements
 - Python 3.10+
-- Windows (macOS being tested, Linux untested)
+- Windows and MacOS (Linux untested)
 
 ### Setup
 ```bash
