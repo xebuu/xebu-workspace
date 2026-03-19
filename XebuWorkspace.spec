@@ -33,3 +33,19 @@ exe = EXE(
     upx=True,
     console=False,
 )
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=True,
+    name='XebuWorkspace',
+)
+
+app = BUNDLE(
+    coll,
+    name='XebuWorkspace.app',
+    icon=None,
+    bundle_identifier='com.xebu.workspace',
+)
