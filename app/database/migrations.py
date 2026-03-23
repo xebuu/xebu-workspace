@@ -8,9 +8,10 @@ from app.database.schema import (
     create_projects_table,
     create_settings_table,
     create_tasks_table,
+    create_toolbar_table,
 )
 
-CURRENT_SCHEMA_VERSION = 4
+CURRENT_SCHEMA_VERSION = 5
 
 
 def get_applied_version(conn: Connection) -> int:
@@ -49,4 +50,8 @@ def ensure_schema(conn: Connection) -> int:
         create_archived_tasks_table(conn)
         record_schema_version(conn, 4)
         current = 4
+    if current < 5:
+        create_toolbar_table(conn)
+        record_schema_version(conn, 5)
+        current = 5
     return CURRENT_SCHEMA_VERSION
