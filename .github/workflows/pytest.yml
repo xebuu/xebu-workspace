@@ -32,4 +32,12 @@ jobs:
         run: python -m compileall .
 
       - name: Run pytest
-        run: python -m pytest
+        shell: pwsh
+        run: |
+          python -m pytest
+          $code = $LASTEXITCODE
+          if ($code -eq 5) {
+            Write-Host "Pytest found no tests; treating as success."
+            exit 0
+          }
+          exit $code
