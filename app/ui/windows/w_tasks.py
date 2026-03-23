@@ -23,7 +23,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.utility.database import ArchivedTasksRepo, TasksRepo
+from app.database.archived_tasks_repository import ArchivedTasksRepository
+from app.database.tasks_repository import TasksRepository
 
 
 # ---------------- Widgets ----------------
@@ -114,10 +115,10 @@ class TasksWindow(QMainWindow):
         self.setWindowTitle("📋 Gestor de Tareas")
         self.resize(940, 600)
 
-        self.tasks_repo = TasksRepo()
-        self.arch_repo = ArchivedTasksRepo()
+        self.tasks_repo = TasksRepository()
+        self.arch_repo = ArchivedTasksRepository()
 
-        self.tasks = self.tasks_repo.load()
+        self.tasks = self.tasks_repo.list_all()
         self.tasks_repo.reset_daily_if_needed(self.tasks)
 
         # Mapear tareas a widgets para actualizaciones eficientes
@@ -218,7 +219,7 @@ class TasksWindow(QMainWindow):
             "prioridad": (self.cmb_prio.currentText() or "media").lower(),
         }
         self.tasks.append(new_task)
-        self.tasks_repo.save(self.tasks)
+        self.tasks_repo.save_all(self.tasks)
 
         # Crear widget para la nueva tarea e insertarlo al principio (índice 0 es después del título)
         row = _TaskRow(
@@ -240,7 +241,7 @@ class TasksWindow(QMainWindow):
 
     def _toggle_task(self, task: dict):
         task["completado"] = not task.get("completado", False)
-        self.tasks_repo.save(self.tasks)
+        self.tasks_repo.save_all(self.tasks)
 
         # Obtener el widget de la tarea
         task_id = id(task)
@@ -277,7 +278,7 @@ class TasksWindow(QMainWindow):
 
         # Remover de la lista de tareas
         self.tasks = [t for t in self.tasks if t is not task]
-        self.tasks_repo.save(self.tasks)
+        self.tasks_repo.save_all(self.tasks)
 
     def _archive_task(self, task: dict):
         ok, err = self.arch_repo.append_task(task)

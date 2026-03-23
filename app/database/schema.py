@@ -25,6 +25,22 @@ CREATE TABLE IF NOT EXISTS projects (
 )
 """
 
+TASKS_TABLE = """
+CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT PRIMARY KEY,
+    payload TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+"""
+
+ARCHIVED_TASKS_TABLE = """
+CREATE TABLE IF NOT EXISTS archived_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    payload TEXT NOT NULL,
+    archived_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+"""
+
 
 def create_base_schema(conn: Connection) -> None:
     """Create the base schema objects that must always exist."""
@@ -39,3 +55,13 @@ def create_settings_table(conn: Connection) -> None:
 def create_projects_table(conn: Connection) -> None:
     """Create the projects table used by ProjectsRepository."""
     conn.execute(PROJECTS_TABLE)
+
+
+def create_tasks_table(conn: Connection) -> None:
+    """Create the task table used by TasksRepository."""
+    conn.execute(TASKS_TABLE)
+
+
+def create_archived_tasks_table(conn: Connection) -> None:
+    """Create the archive table used by ArchivedTasksRepository."""
+    conn.execute(ARCHIVED_TASKS_TABLE)

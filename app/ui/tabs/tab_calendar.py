@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.utility.database import TasksRepo
+from app.database.tasks_repository import TasksRepository
 from app.core.theme import theme_manager
 
 
@@ -34,7 +34,8 @@ class CalendarTab(QMainWindow):
         self.resize(1000, 640)
 
         # Initialize database
-        self.tasks_repo = TasksRepo()
+        self.tasks_repo = TasksRepository()
+        self.tasks_repo.reset_daily_if_needed(self.tasks_repo.list_all())
         self.selected_date = QDate.currentDate()
 
         # Setup central widget and main layout
@@ -125,7 +126,7 @@ class CalendarTab(QMainWindow):
         self.tasks_header.setText(f"Tareas del día • {formatted_date}")
 
         # Load all tasks
-        all_tasks = self.tasks_repo.load()
+        all_tasks = self.tasks_repo.list_all()
 
         # Filter tasks by deadline matching the selected date
         tasks_for_date = [
@@ -222,15 +223,13 @@ class CalendarTab(QMainWindow):
     def _toggle_task(self, task: dict):
         """Toggle task completion status."""
         task["completado"] = not task.get("completado", False)
-        self.tasks_repo.save(self.tasks_repo.load())
 
-        # Reload tasks to update display
-        all_tasks = self.tasks_repo.load()
+        all_tasks = self.tasks_repo.list_all()
         for t in all_tasks:
             if t.get("tarea") == task.get("tarea"):
                 t["completado"] = task["completado"]
 
-        self.tasks_repo.save(all_tasks)
+        self.tasks_repo.save_all(all_tasks)
         self._on_date_selected(self.selected_date)
         self._update_calendar_indicators()
 
@@ -248,9 +247,9 @@ class CalendarTab(QMainWindow):
 
         if reply == QMessageBox.Yes:
             # Remove task from database
-            all_tasks = self.tasks_repo.load()
+            all_tasks = self.tasks_repo.list_all()
             all_tasks = [t for t in all_tasks if t.get("tarea") != task.get("tarea")]
-            self.tasks_repo.save(all_tasks)
+            self.tasks_repo.save_all(all_tasks)
 
             # Refresh UI
             self._on_date_selected(self.selected_date)
@@ -347,9 +346,9 @@ class CalendarTab(QMainWindow):
         }
 
         # Add to database
-        all_tasks = self.tasks_repo.load()
+        all_tasks = self.tasks_repo.list_all()
         all_tasks.append(new_task)
-        self.tasks_repo.save(all_tasks)
+        self.tasks_repo.save_all(all_tasks)
 
         # Refresh UI
         self._on_date_selected(self.selected_date)
@@ -360,7 +359,7 @@ class CalendarTab(QMainWindow):
     def _update_calendar_indicators(self):
         """Mark dates with tasks using subtle visual indicators on the calendar."""
         # Load all tasks from database
-        all_tasks = self.tasks_repo.load()
+        all_tasks = self.tasks_repo.list_all()
 
         # Extract unique deadline dates
         task_dates = set()
