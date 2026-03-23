@@ -29,17 +29,17 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.tabs.tab_calendar import CalendarTab
-from app.tabs.tab_configuracion import ConfiguracionTab
+from app.ui.tabs.tab_calendar import CalendarTab
+from app.ui.tabs.tab_configuracion import ConfiguracionTab
 
 # Vista interna
-from app.tabs.tab_projects import ProjectManagerTab
-from app.utility.database import MainWindowToolbarRepo
-from app.utility.helpers import open_resource_target
-from app.utility.paths import assets_path
-from app.widgets.overlay_sidebar import COLLAPSED_WIDTH, OverlaySidebar
-from app.windows.w_bitacora import BitacoraWindow
-from app.windows.w_tasks import TasksWindow
+from app.ui.tabs.tab_projects import ProjectManagerTab
+from app.database.toolbar_repository import ToolbarRepository
+from app.core.helpers import open_resource_target
+from app.core.paths import assets_path
+from app.ui.widgets.overlay_sidebar import COLLAPSED_WIDTH, OverlaySidebar
+from app.ui.windows.w_bitacora import BitacoraWindow
+from app.ui.windows.w_tasks import TasksWindow
 
 
 def _open_target(target: str):
@@ -145,7 +145,8 @@ class MainWindow(QMainWindow):
         }
         self._bitacora_win = None
         self._tasks_win = None
-        self._toolbar_db = None
+        self._toolbar_items: list[dict[str, str]] = []
+        self.toolbar_repo = ToolbarRepository()
 
         self._build_menubar()
         self._build_toolbar()
@@ -215,8 +216,7 @@ class MainWindow(QMainWindow):
         tb.setFloatable(True)
 
         # ---- carga items existentes --
-        self.toolbar_repo = MainWindowToolbarRepo()
-        self._toolbar_db = self.toolbar_repo.load()
+        self._toolbar_items = self.toolbar_repo.list_items()
         self._toolbar_buttons: dict[str, QAction] = {}  # id -> action
 
         # Botón  (agregar acceso)
@@ -246,7 +246,7 @@ class MainWindow(QMainWindow):
 
         # inserta accesos (los agregamos a la izquierda del spacer)
         # Para que queden antes del spacer, añadimos en posición 1 (después del botón ➕)
-        for item in self._toolbar_db.get("items", []):
+        for item in self._toolbar_items:
             self._toolbar_add_action_from_item(tb, item, insert_before_spacer=True)
 
         # colócalo arriba (también puedes usar Left/Right/Bottom)
@@ -300,14 +300,12 @@ class MainWindow(QMainWindow):
         item = dlg.result_item()
 
         # persiste
-        db = self._toolbar_db or self.toolbar_repo.load()
-        db["items"].append(item)
-        self.toolbar_repo.save(db)
-        self._toolbar_db = db
+        new_item = self.toolbar_repo.insert_item(item)
+        self._toolbar_items.append(new_item)
 
         # crea botón en runtime (antes del spacer)
         self._toolbar_add_action_from_item(
-            self.toolbar, item, insert_before_spacer=True
+            self.toolbar, new_item, insert_before_spacer=True
         )
 
     def _toolbar_item_context_menu(self, item_id: str, btn: QToolButton):
@@ -322,8 +320,7 @@ class MainWindow(QMainWindow):
 
     def _toolbar_edit_item(self, item_id: str):
         # 1) Cargar DB (caché o disco)
-        db = self._toolbar_db or self.toolbar_repo.load()
-        items = db.get("items", [])
+        items = self._toolbar_items
 
         # 2) Buscar item
         itemSelected = None
@@ -362,13 +359,16 @@ class MainWindow(QMainWindow):
         new_title = new_title.strip()
         new_target = new_target.strip()
 
+        # 5) Guardar cambios
+        updated = self.toolbar_repo.update_item(
+            item_id, title=new_title, target=new_target
+        )
+        if not updated:
+            return
+
         # 4) Actualizar el dict en memoria
         itemSelected["title"] = new_title
         itemSelected["target"] = new_target
-
-        # 5) Guardar JSON (ajusta al nombre de tu función de guardado)
-        self._toolbar_db = db
-        self.toolbar_repo.save(db)
 
         # 6) Actualizar la QAction ya existente en la barra
         act = self._toolbar_buttons.get(item_id)
@@ -405,10 +405,10 @@ class MainWindow(QMainWindow):
             return
 
         # quita de la DB
-        db = self._toolbar_db or self.toolbar_repo.load()
-        db["items"] = [it for it in db.get("items", []) if it.get("id") != item_id]
-        self.toolbar_repo.save(db)
-        self._toolbar_db = db
+        deleted = self.toolbar_repo.delete_item(item_id)
+        if not deleted:
+            return
+        self._toolbar_items = [it for it in self._toolbar_items if it.get("id") != item_id]
 
         # reconstruir toolbar (más simple/robusto que buscar y eliminar widget por widget)
         self.removeToolBar(self.toolbar)

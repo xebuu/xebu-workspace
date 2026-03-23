@@ -35,6 +35,7 @@ app/data/JSON/tasks_archive.csv
 app/data/input_CSV/
 app/data/input_CSV_archive/
 app/data/CSV/
+app/.appdata/
 
 # Logs / temporal 
 *.log
@@ -44,4 +45,5 @@ app/data/CSV/
 TODO.md
 ideas.txt
 tests/
+notes/
 

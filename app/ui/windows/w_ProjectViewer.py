@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.models.project_models import CopierItem, ProcessDef, ScriptItem
-from app.utility.helpers import open_resource_target
+from app.core.helpers import open_resource_target
 
 # -------------------- Runner: open a process and run scripts --------------------
 
