@@ -17,6 +17,14 @@ CREATE TABLE IF NOT EXISTS settings (
 )
 """
 
+PROJECTS_TABLE = """
+CREATE TABLE IF NOT EXISTS projects (
+    id TEXT NOT NULL PRIMARY KEY,
+    payload TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+"""
+
 
 def create_base_schema(conn: Connection) -> None:
     """Create the base schema objects that must always exist."""
@@ -26,3 +34,8 @@ def create_base_schema(conn: Connection) -> None:
 def create_settings_table(conn: Connection) -> None:
     """Create the dedicated settings table that repositories can use."""
     conn.execute(SETTINGS_TABLE)
+
+
+def create_projects_table(conn: Connection) -> None:
+    """Create the projects table used by ProjectsRepository."""
+    conn.execute(PROJECTS_TABLE)

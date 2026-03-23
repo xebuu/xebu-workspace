@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.models.project_models import ProcessDef
-from app.utility.database import ProjectsRepo
+from app.database.project_repository import ProjectsRepository
 from app.ui.widgets.search_bars import ProjectSearchBar
 from app.ui.windows.w_archived_projects import ArchivedProjectWindow
 from app.ui.windows.w_project_editor import ProjectEditorWindow
@@ -36,9 +36,8 @@ class ProjectManagerTab(QMainWindow):
         super().__init__(parent)
         self.setWindowTitle("Gestión de Proyectos")
         self.resize(1000, 640)
-        self.projects_repo = ProjectsRepo()
-        self.db = self.projects_repo.load()
-        # self.db = _load_db()
+        self.repo = ProjectsRepository()
+        self.processes: list[ProcessDef] = self.repo.list_all()
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -87,18 +86,8 @@ class ProjectManagerTab(QMainWindow):
             if w is not None:
                 w.deleteLater()
 
-        # Only render non-archived Projects
-        raw_projs = self.db.get("processes", [])
-        active_projs = [
-            p
-            for p in raw_projs
-            if isinstance(p, dict) and p.get("is_archived") is not True
-        ]
+        processes = data if data is not None else self._visible_processes()
 
-        if data is None:
-            processes = [ProcessDef.from_dict(p) for p in active_projs]
-        else:
-            processes = [ProcessDef.from_dict(p) for p in data]
 
         if not processes:
             if query == "":
@@ -121,6 +110,29 @@ class ProjectManagerTab(QMainWindow):
             self.grid.addWidget(self._make_card(proc), r, c, alignment=Qt.AlignTop)
 
         self.grid.setRowStretch(self.grid.rowCount(), 1)
+
+    def _visible_processes(self) -> list[ProcessDef]:
+        return [
+            proc for proc in self.processes if not getattr(proc, "is_archived", False)
+        ]
+
+    def _find_process(self, proc_id: str) -> ProcessDef | None:
+        for proc in self.processes:
+            if proc.id == proc_id:
+                return proc
+        return None
+
+    def _persist_process(self, proc: ProcessDef) -> None:
+        for idx, existing in enumerate(self.processes):
+            if existing.id == proc.id:
+                self.processes[idx] = proc
+                break
+        else:
+            self.processes.append(proc)
+        self.repo.save(proc)
+
+    def _remove_process(self, proc_id: str) -> None:
+        self.processes = [proc for proc in self.processes if proc.id != proc_id]
 
     def _make_card(self, proc: ProcessDef) -> QWidget:
 
@@ -211,30 +223,20 @@ class ProjectManagerTab(QMainWindow):
         w.show()
 
     def _runner_saved(self, proc: ProcessDef):
-        # update in-memory db and persist
-        for i, p in enumerate(self.db.get("processes", [])):
-            if p.get("id") == proc.id:
-                self.db["processes"][i] = proc.to_dict()
-                break
-        self.projects_repo.save(self.db)
+        self._persist_process(proc)
 
     def _open_builder_new(self):
         dlg = ProjectEditorWindow(parent=self)
         if dlg.exec() == QDialog.Accepted:
             new_proc = dlg.result_process()
-            self.db["processes"].append(new_proc.to_dict())
-            self.projects_repo.save(self.db)
+            self._persist_process(new_proc)
             self._render()
 
     def _open_builder_edit(self, proc: ProcessDef):
         dlg = ProjectEditorWindow(existing=proc, parent=self)
         if dlg.exec() == QDialog.Accepted:
             updated = dlg.result_process()
-            for i, p in enumerate(self.db["processes"]):
-                if p["id"] == updated.id:
-                    self.db["processes"][i] = updated.to_dict()
-                    break
-            self.projects_repo.save(self.db)
+            self._persist_process(updated)
             self._render()
 
     def _delete_process(self, proc_id: str):
@@ -249,10 +251,8 @@ class ProjectManagerTab(QMainWindow):
             != QMessageBox.Yes
         ):
             return
-        procs = self.db.get("processes", [])
-        procs = [p for p in procs if p.get("id") != proc_id]
-        self.db["processes"] = procs
-        self.projects_repo.save(self.db)
+        if self.repo.delete(proc_id):
+            self._remove_process(proc_id)
         self._render()
 
     def _archive_process(self, proc_id: str):
@@ -268,72 +268,48 @@ class ProjectManagerTab(QMainWindow):
         ):
             return
 
-        procs = self.db.get("processes", [])
         now_iso = datetime.now().isoformat(timespec="seconds")
-
-        for p in procs:
-            if p.get("id") == proc_id:
-                p["is_archived"] = True
-                p["archived_at"] = now_iso
-                break
-
-        self.db["processes"] = procs
-        self.projects_repo.save(self.db)
+        proc = self._find_process(proc_id)
+        if proc is None:
+            return
+        proc.is_archived = True
+        proc.archived_at = now_iso
+        self._persist_process(proc)
         self._render()
 
     def _open_archived_projects(self):
-        def on_unarchived(proc_id: str):
-            # mutate + persist using your existing patterns
-            procs = self.db.get("processes", [])
-            for p in procs:
-                if p.get("id") == proc_id:
-                    p["is_archived"] = False
-                    p["archived_at"] = None
-                    break
-            self.db["processes"] = procs
-            self.projects_repo.save(self.db)
-            self._render()
-
         self._archived_win = ArchivedProjectWindow(
-            self.db, on_unarchived=on_unarchived, parent=self
+            self.processes, on_unarchived=self._on_unarchived, parent=self
         )
         self._archived_win.show()
+
+    def _on_unarchived(self, proc_id: str):
+        proc = self._find_process(proc_id)
+        if not proc:
+            return
+        proc.is_archived = False
+        proc.archived_at = None
+        self._persist_process(proc)
+        self._render()
 
     def _on_search_changed(self, text: str):
         text = (text or "").strip().lower()
 
-        raw_projs = self.db.get("processes", [])
-        active_projs = [
-            p
-            for p in raw_projs
-            if isinstance(p, dict) and p.get("is_archived") is not True
-        ]
-
         if not text:
-            return self._render(None)  # show all active
+            return self._render()
 
-        def field(d: dict, key: str) -> str:
-            v = d.get(key, "")
-            return (v or "").lower() if isinstance(v, str) else str(v).lower()
+        def matches(proc: ProcessDef) -> bool:
+            name = (getattr(proc, "name", "") or "").lower()
+            desc = (getattr(proc, "description", "") or "").lower()
+            return text in name or text in desc
 
-        filtered = [
-            p
-            for p in active_projs
-            if text in field(p, "name") or text in field(p, "title")
-        ]
-
+        filtered = [proc for proc in self._visible_processes() if matches(proc)]
         self._render(filtered, query=text)
 
     def _pin_project(self, proc_id: str):
-        procs = self.db.get("processes", [])
-        updated = False
-        for p in procs:
-            if p.get("id") == proc_id:
-                p["is_pinned"] = not p.get("is_pinned", False)
-                updated = True
-                break
-        if not updated:
+        proc = self._find_process(proc_id)
+        if not proc:
             return
-        self.db["processes"] = procs
-        self.projects_repo.save(self.db)
+        proc.is_pinned = not proc.is_pinned
+        self._persist_process(proc)
         self._render()

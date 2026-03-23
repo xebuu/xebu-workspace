@@ -35,6 +35,8 @@ class ProcessDef:
     scripts: List[ScriptItem] = field(default_factory=list)
     links: List[LinkItem] = field(default_factory=list)
     copiers: List[CopierItem] = field(default_factory=list)
+    is_archived: bool = False
+    archived_at: Optional[str] = None
 
     @staticmethod
     def from_dict(d: dict) -> "ProcessDef":
@@ -51,6 +53,8 @@ class ProcessDef:
             name=d.get("name", "Sin nombre"),
             description=d.get("description", ""),
             is_pinned=d.get("is_pinned", False),
+            is_archived=d.get("is_archived", False),
+            archived_at=d.get("archived_at"),
             scripts=[ScriptItem(**s) for s in d.get("scripts", [])],
             links=[LinkItem(**l) for l in d.get("links", [])],
             copiers=[CopierItem(**c) for c in raw_copiers],
@@ -65,4 +69,6 @@ class ProcessDef:
             "scripts": [asdict(s) for s in self.scripts],
             "links": [asdict(l) for l in self.links],
             "copiers": [asdict(c) for c in self.copiers],
+            "is_archived": self.is_archived,
+            "archived_at": self.archived_at,
         }

@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from sqlite3 import Connection
 
-from app.database.schema import create_base_schema, create_settings_table
+from app.database.schema import (
+    create_base_schema,
+    create_projects_table,
+    create_settings_table,
+)
 
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 
 def get_applied_version(conn: Connection) -> int:
@@ -33,4 +37,9 @@ def ensure_schema(conn: Connection) -> int:
     if current < 2:
         create_settings_table(conn)
         record_schema_version(conn, 2)
+        current = 2
+    if current < 3:
+        create_projects_table(conn)
+        record_schema_version(conn, 3)
+        current = 3
     return CURRENT_SCHEMA_VERSION
