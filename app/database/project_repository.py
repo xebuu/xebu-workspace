@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
-from typing import Callable, List, Optional
+import uuid
+from typing import Any, Callable, Dict, List, Optional
 
+from app.core.paths import FILES_JSON
 from app.database.connection import connection_context
 from app.database.schema import create_projects_table
 from app.models.project_models import ProcessDef
-from app.utility.database import ProjectsRepo as LegacyProjectsRepo
 
 
 def _with_table(func: Callable[..., None] | Callable[..., List[ProcessDef]]):
@@ -16,6 +17,55 @@ def _with_table(func: Callable[..., None] | Callable[..., List[ProcessDef]]):
             return func(*args, conn=conn, **kwargs)
 
     return wrapper
+
+
+def _save_legacy_project_store(data: Dict[str, Any]) -> None:
+    FILES_JSON.write_text(
+        json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def _load_legacy_project_store() -> Dict[str, Any]:
+    FILES_JSON.parent.mkdir(parents=True, exist_ok=True)
+    if not FILES_JSON.exists():
+        FILES_JSON.write_text(
+            json.dumps({"processes": [], "tasks": []}, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+    try:
+        data = json.loads(FILES_JSON.read_text(encoding="utf-8")) or {}
+    except json.JSONDecodeError:
+        data = {}
+
+    data.setdefault("processes", [])
+    data.setdefault("tasks", [])
+
+    changed = False
+    processes = data["processes"]
+    if not isinstance(processes, list):
+        processes = []
+        data["processes"] = processes
+        changed = True
+
+    for proc in processes:
+        if not isinstance(proc, dict):
+            continue
+        if "id" not in proc:
+            proc["id"] = str(uuid.uuid4())
+            changed = True
+        proc.setdefault("name", "Sin nombre")
+        proc.setdefault("description", "")
+        proc.setdefault("scripts", [])
+        proc.setdefault("links", [])
+        proc.setdefault("copiers", [])
+        proc.setdefault("is_pinned", False)
+        proc.setdefault("is_archived", False)
+        proc.setdefault("archived_at", None)
+
+    if changed:
+        _save_legacy_project_store(data)
+
+    return data
 
 
 class ProjectsRepository:
@@ -38,8 +88,7 @@ class ProjectsRepository:
             f"SELECT COUNT(1) FROM {self.TABLE}"
         ).fetchone()[0]
         if count == 0:
-            legacy = LegacyProjectsRepo()
-            store = legacy.load()
+            store = _load_legacy_project_store()
             for raw in store.get("processes", []):
                 proc = ProcessDef.from_dict(raw)
                 conn.execute(

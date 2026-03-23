@@ -5,9 +5,9 @@ import uuid
 from datetime import date as date_cls
 from typing import Callable, List
 
+from app.core.paths import ACTIVE_TASKS_JSON
 from app.database.connection import connection_context
 from app.database.schema import create_tasks_table
-from app.utility.database import TasksRepo as LegacyTasksRepo
 
 
 def _with_tasks_table(func: Callable[..., None]):
@@ -17,6 +17,19 @@ def _with_tasks_table(func: Callable[..., None]):
             return func(*args, conn=conn, **kwargs)
 
     return wrapper
+
+
+def _load_legacy_tasks() -> List[dict]:
+    path = ACTIVE_TASKS_JSON
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("[]", encoding="utf-8")
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8")) or []
+        return data if isinstance(data, list) else []
+    except json.JSONDecodeError:
+        return []
 
 
 class TasksRepository:
@@ -39,8 +52,7 @@ class TasksRepository:
             return
         count = conn.execute(f"SELECT COUNT(1) FROM {self.TABLE}").fetchone()[0]
         if count == 0:
-            legacy = LegacyTasksRepo()
-            tasks = legacy.load()
+            tasks = _load_legacy_tasks()
             for task in tasks:
                 conn.execute(
                     f"INSERT OR REPLACE INTO {self.TABLE} (id, payload) VALUES (?, ?)",
