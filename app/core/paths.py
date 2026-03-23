@@ -91,14 +91,7 @@ def get_backup_dir() -> Path:
 
 APP_DATA_DIR = ensure_app_data_dir()
 
-
-FILES_JSON = APP_DATA_DIR / "files.json"
-ACTIVE_TASKS_JSON = APP_DATA_DIR / "tasks.json"
 ARCHIVED_TASKS_CSV = APP_DATA_DIR / "tasks_archive.csv"
-
-# === Main Window ===
-
-TOOLBAR_JSON = APP_DATA_DIR / "toolbar.json"
 BITACORA_CSV = APP_DATA_DIR / "bitacora.csv"
 
 # XebuWorkspace Paths
@@ -116,10 +109,7 @@ __all__ = [
     "get_log_path",
     "get_backup_dir",
     "APP_DATA_DIR",
-    "FILES_JSON",
-    "ACTIVE_TASKS_JSON",
     "ARCHIVED_TASKS_CSV",
-    "TOOLBAR_JSON",
     "BITACORA_CSV",
     "APP_DIR",
     "ASSETS_DIR",

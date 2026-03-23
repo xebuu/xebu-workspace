@@ -5,7 +5,6 @@ import uuid
 from datetime import date as date_cls
 from typing import Callable, List
 
-from app.core.paths import ACTIVE_TASKS_JSON
 from app.database.connection import connection_context
 from app.database.schema import create_tasks_table
 
@@ -19,24 +18,8 @@ def _with_tasks_table(func: Callable[..., None]):
     return wrapper
 
 
-def _load_legacy_tasks() -> List[dict]:
-    path = ACTIVE_TASKS_JSON
-    if not path.exists():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("[]", encoding="utf-8")
-        return []
-    try:
-        data = json.loads(path.read_text(encoding="utf-8")) or []
-        return data if isinstance(data, list) else []
-    except json.JSONDecodeError:
-        return []
-
-
 class TasksRepository:
     TABLE = "tasks"
-
-    def __init__(self):
-        self._seeded = False
 
     def _serialize(self, task: dict) -> str:
         if "id" not in task:
@@ -47,28 +30,13 @@ class TasksRepository:
     def _deserialize(self, payload: str) -> dict:
         return json.loads(payload)
 
-    def _maybe_import_json(self, conn):
-        if self._seeded:
-            return
-        count = conn.execute(f"SELECT COUNT(1) FROM {self.TABLE}").fetchone()[0]
-        if count == 0:
-            tasks = _load_legacy_tasks()
-            for task in tasks:
-                conn.execute(
-                    f"INSERT OR REPLACE INTO {self.TABLE} (id, payload) VALUES (?, ?)",
-                    (task.get("id") or str(uuid.uuid4()), self._serialize(task)),
-                )
-        self._seeded = True
-
     @_with_tasks_table
     def list_all(self, *, conn) -> List[dict]:
-        self._maybe_import_json(conn)
         rows = conn.execute(f"SELECT payload FROM {self.TABLE}").fetchall()
         return [self._deserialize(row[0]) for row in rows]
 
     @_with_tasks_table
     def save_all(self, tasks: List[dict], *, conn) -> None:
-        self._maybe_import_json(conn)
         conn.execute(f"DELETE FROM {self.TABLE}")
         entries = [
             (task.get("id") or str(uuid.uuid4()), self._serialize(task)) for task in tasks
