@@ -54,8 +54,6 @@ class ProjectViewWindow(QMainWindow):
         title.setObjectName("RunTitle")
 
         # ===== Left: title and botones para edición de texto ==========
-        title = QLabel(proc.name)
-        title.setObjectName("RunTitle")
         left.addWidget(title)
 
         # enmarcamos los controles en un QFrame para separarlos visualmente
@@ -124,7 +122,6 @@ class ProjectViewWindow(QMainWindow):
         scrollDesc.setMaximumHeight(500)  # ajusta si quieres
         scrollDesc.setWidget(self.desc)
 
-        left.addWidget(title)
         # header_frame added earlier above, no need for TextEditHeader layout
         left.addWidget(scrollDesc)
 
