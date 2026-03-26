@@ -220,6 +220,7 @@ class ProjectManagerTab(QMainWindow):
         w = ProjectViewWindow(proc, parent=self)
         # ensure modifications are written back to the database
         w.on_save_proc = self._runner_saved
+        w.on_delete_proc = self._delete_process
         w.show()
 
     def _runner_saved(self, proc: ProcessDef):

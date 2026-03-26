@@ -45,6 +45,7 @@ if TYPE_CHECKING:
         ProcessDef,
         ScriptItem,
     )
+from app.ui.windows.w_new_project import NewProjectWindow
 
 # -------------------- Runner: open a process and run scripts --------------------
 
@@ -54,6 +55,7 @@ class ProjectViewWindow(QMainWindow):
         super().__init__(parent)
         self.proc = proc
         self.on_save_proc = None
+        self.on_delete_proc = None
         self.setWindowTitle(f"Proyecto — {proc.name}")
         self.resize(1000, 640)
 
@@ -61,6 +63,9 @@ class ProjectViewWindow(QMainWindow):
         toolbar.setObjectName("ProjectViewerToolbar")
         self.addToolBar(toolbar)
         self.access_toolbar = toolbar
+
+        toolbar.setContextMenuPolicy(Qt.CustomContextMenu)
+        toolbar.customContextMenuRequested.connect(self._toolbar_context_menu)
 
         add_button = QToolButton()
         add_button.setText("Agregar   ")
@@ -102,9 +107,9 @@ class ProjectViewWindow(QMainWindow):
         desc_layout.setContentsMargins(12, 12, 12, 12)
         desc_layout.setSpacing(8)
 
-        title = QLabel(proc.name)
-        title.setObjectName("RunTitle")
-        desc_layout.addWidget(title)
+        self.title_label = QLabel(proc.name)
+        self.title_label.setObjectName("RunTitle")
+        desc_layout.addWidget(self.title_label)
 
         # enmarcamos los controles en un QFrame para separarlos visualmente
         header_frame = QFrame()
@@ -141,15 +146,7 @@ class ProjectViewWindow(QMainWindow):
 
         # --- Descripción con scroll (cambio mínimo) ---
         self.desc = QTextEdit()
-        # handle previously stored HTML or plain text transparently
-        description = proc.description or ""
-        if isinstance(description, str):
-            try:
-                self.desc.setHtml(description)
-            except (TypeError, ValueError):
-                self.desc.setPlainText(description)
-        else:
-            self.desc.setPlainText(str(description))
+        self._apply_description_to_editor()
         self.desc.setContentsMargins(0, 0, 0, 0)
         self.desc.setFixedHeight(700)
         self.desc.cursorPositionChanged.connect(self._update_format_buttons)
@@ -234,6 +231,20 @@ class ProjectViewWindow(QMainWindow):
 
         if self.statusBar():
             self.statusBar().showMessage("Descripción guardada", 2000)
+
+    def _apply_description_to_editor(self):
+        description = self.proc.description or ""
+        self.desc.blockSignals(True)
+        try:
+            if isinstance(description, str):
+                try:
+                    self.desc.setHtml(description)
+                except (TypeError, ValueError):
+                    self.desc.setPlainText(description)
+            else:
+                self.desc.setPlainText(str(description))
+        finally:
+            self.desc.blockSignals(False)
 
     def _toggle_bold(self, _checked: bool = False):
         """Toggle bold formatting for the current selection or future text."""
@@ -334,6 +345,38 @@ class ProjectViewWindow(QMainWindow):
             layout.addWidget(self.out, 0)
         else:
             self.out.hide()
+
+    def _toolbar_context_menu(self, pos):
+        action = self.access_toolbar.actionAt(pos)
+        if action is None:
+            return
+        data = action.data()
+        if not isinstance(data, dict):
+            return
+        menu = QMenu(self)
+        menu.addAction("Editar", lambda: self._edit_toolbar_action(action))
+        menu.addAction("Borrar", lambda: self._remove_toolbar_action(action))
+        menu.exec_(self.access_toolbar.mapToGlobal(pos))
+
+    def _edit_toolbar_action(self, action: QAction):
+        data = action.data()
+        kind = data.get("kind")
+        item = data.get("item")
+        if kind == "link":
+            self._edit_link_item(item)
+        elif kind == "copier":
+            self._edit_copier_item(item)
+        elif kind == "script":
+            self._edit_script_item(item)
+
+    def _remove_toolbar_action(self, action: QAction):
+        data = action.data()
+        kind = data.get("kind")
+        item = data.get("item")
+        arr = getattr(self.proc, f"{kind}s", [])
+        if item in arr:
+            arr.remove(item)
+        self._refresh_toolbar_access_actions()
 
 
     def _add_script_dialog(self):
@@ -586,23 +629,139 @@ class ProjectViewWindow(QMainWindow):
             self.access_toolbar.removeAction(act)
         self._access_actions = []
 
-        def add(text: str, target_callable):
+        def add(text: str, target_callable, payload: dict):
             act = QAction(text, self)
             act.triggered.connect(target_callable)
             self.access_toolbar.insertAction(spacer, act)
             self._access_actions.append(act)
+            act.setData(payload)
 
         for lk in self.proc.links:
-            add(f"🔗 {lk.title}", lambda _=None, t=lk.target: self._open(t))
+            add(
+                f"🔗 {lk.title}",
+                lambda _=None, t=lk.target: self._open(t),
+                {"kind": "link", "item": lk},
+            )
         for cp in self.proc.copiers:
-            add(f"🗄️ {cp.title}", lambda _=None, x=cp: self._runner_copy(x))
+            add(
+                f"🗄️ {cp.title}",
+                lambda _=None, x=cp: self._runner_copy(x),
+                {"kind": "copier", "item": cp},
+            )
         for s in self.proc.scripts:
             script_name = Path(s.path).name or s.path
-            add(f"▶ {script_name}", lambda _=None, script=s: self._run_script(script))
+            add(
+                f"▶ {script_name}",
+                lambda _=None, script=s: self._run_script(script),
+                {"kind": "script", "item": s},
+            )
 
     def _notify_proc_updated(self):
         if self.on_save_proc:
             self.on_save_proc(self.proc)
+
+    def _edit_link_item(self, link: "LinkItem"):
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Editar acceso")
+        dlg.setStyleSheet("QDialog { background:#2d2d2d; }")
+        v = QVBoxLayout(dlg)
+        t = QLineEdit(link.title)
+        u = QLineEdit(link.target)
+        row = QHBoxLayout()
+        row.addWidget(u, 1)
+        btn = QPushButton("Buscar…")
+        btn.clicked.connect(lambda: self._browse_any_into(u))
+        row.addWidget(btn)
+        v.addWidget(QLabel("Título:"))
+        v.addWidget(t)
+        v.addWidget(QLabel("Destino:"))
+        v.addLayout(row)
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        v.addWidget(btns)
+        btns.accepted.connect(lambda: self._apply_link_edit(link, t, u, dlg))
+        btns.rejected.connect(dlg.reject)
+        dlg.exec()
+
+    def _apply_link_edit(self, link, title_input, target_input, dlg):
+        title = title_input.text().strip()
+        target = target_input.text().strip()
+        if not title or not target:
+            QMessageBox.warning(self, "Acceso", "Título y destino son obligatorios.")
+            return
+        link.title = title
+        link.target = target
+        self._refresh_toolbar_access_actions()
+        dlg.accept()
+
+    def _edit_copier_item(self, copier: "CopierItem"):
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Editar copiador")
+        v = QVBoxLayout(dlg)
+        t = QLineEdit(copier.title)
+        td = QLineEdit(copier.target_dir)
+        hd = QLineEdit(copier.history_dir)
+        pt = QLineEdit(copier.pattern)
+        v.addWidget(QLabel("Título:"))
+        v.addWidget(t)
+        v.addWidget(QLabel("Carpeta destino:"))
+        v.addWidget(td)
+        v.addWidget(QLabel("Carpeta histórico:"))
+        v.addWidget(hd)
+        v.addWidget(QLabel("Patrón:"))
+        v.addWidget(pt)
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        v.addWidget(btns)
+        btns.accepted.connect(lambda: self._apply_copier_edit(copier, t, td, hd, pt, dlg))
+        btns.rejected.connect(dlg.reject)
+        dlg.exec()
+
+    def _apply_copier_edit(self, copier, title_input, target_input, history_input, pattern_input, dlg):
+        title = title_input.text().strip()
+        target_dir = target_input.text().strip()
+        if not title or not target_dir:
+            QMessageBox.warning(self, "Copiador", "Título y carpeta destino son obligatorios.")
+            return
+        copier.title = title
+        copier.target_dir = target_dir
+        copier.history_dir = history_input.text().strip()
+        copier.pattern = pattern_input.text().strip() or "*.csv"
+        self._refresh_toolbar_access_actions()
+        dlg.accept()
+
+    def _edit_script_item(self, script: "ScriptItem"):
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Editar script")
+        v = QVBoxLayout(dlg)
+        path_edit = QLineEdit(script.path)
+        args_edit = QLineEdit(script.args)
+        work_edit = QLineEdit(script.workdir or "")
+        row = QHBoxLayout()
+        row.addWidget(path_edit, 1)
+        btn = QPushButton("Buscar…")
+        btn.clicked.connect(lambda: self._browse_file_into(path_edit, "Python (*.py)"))
+        row.addWidget(btn)
+        v.addWidget(QLabel("Ruta del script:"))
+        v.addLayout(row)
+        v.addWidget(QLabel("Argumentos:"))
+        v.addWidget(args_edit)
+        v.addWidget(QLabel("Workdir:"))
+        v.addWidget(work_edit)
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        v.addWidget(btns)
+        btns.accepted.connect(lambda: self._apply_script_edit(script, path_edit, args_edit, work_edit, dlg))
+        btns.rejected.connect(dlg.reject)
+        dlg.exec()
+
+    def _apply_script_edit(self, script, path_edit, args_edit, work_edit, dlg):
+        path = path_edit.text().strip()
+        if not path:
+            QMessageBox.warning(self, "Script", "Selecciona la ruta del script.")
+            return
+        script.path = path
+        script.args = args_edit.text().strip()
+        script.workdir = work_edit.text().strip() or None
+        self._refresh_toolbar_access_actions()
+        dlg.accept()
 
 
 class _MiniTaskRow(QFrame):
@@ -669,6 +828,9 @@ class _MiniTaskRow(QFrame):
             open_resource_target(target)
         except (OSError, webbrowser.Error) as e:
             QMessageBox.warning(self, "Abrir", str(e))
+
+    def _open_placeholder_dialog(self, title: str):
+        QMessageBox.information(self, title, f"{title} placeholder")
 
     def _runner_copy(self, cp: "CopierItem"):
         target_dir = Path(cp.target_dir).expanduser()
