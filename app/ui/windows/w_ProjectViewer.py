@@ -86,6 +86,7 @@ class ProjectViewWindow(QMainWindow):
         root = QHBoxLayout(central)
         root.setContentsMargins(12, 12, 12, 12)
         root.setSpacing(10)
+        central.setStyleSheet("QWidget#ProjectViewerBackground { background:#1E1E1E; }")
 
         # ==== Left: Description + scripts + output ====
         left = QVBoxLayout()
