@@ -8,26 +8,40 @@ import sys
 import webbrowser
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QTimer
-from PySide6.QtGui import QFont
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QFont, QAction
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QMenu,
+    QSizePolicy,
     QScrollArea,
     QTextEdit,
+    QToolButton,
     QVBoxLayout,
     QWidget,
+    QToolBar,
 )
 
-from app.models.project_models import CopierItem, ProcessDef, ScriptItem
-from app.core.helpers import open_resource_target
+if TYPE_CHECKING:
+    from app.models.project_models import (
+        CopierItem,
+        LinkItem,
+        ProcessDef,
+        ScriptItem,
+    )
 
 # -------------------- Runner: open a process and run scripts --------------------
 
@@ -39,6 +53,26 @@ class ProjectViewWindow(QMainWindow):
         self.on_save_proc = None
         self.setWindowTitle(f"Proyecto — {proc.name}")
         self.resize(1000, 640)
+
+        toolbar = QToolBar("Accesos")
+        toolbar.setObjectName("ProjectViewerToolbar")
+        self.addToolBar(toolbar)
+        self.access_toolbar = toolbar
+
+        add_button = QToolButton()
+        add_button.setText("Agregar   ")
+        add_button.setPopupMode(QToolButton.InstantPopup)
+        add_menu = QMenu(self)
+        add_menu.addAction("Script", self._add_script_dialog)
+        add_menu.addAction("Copiador", self._add_copier_dialog)
+        add_menu.addAction("Acceso", self._add_link_dialog)
+        add_button.setMenu(add_menu)
+        toolbar.addWidget(add_button)
+
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self._spacer_action = toolbar.addWidget(spacer)
+        self._access_actions: list[QAction] = []
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -144,32 +178,19 @@ class ProjectViewWindow(QMainWindow):
         left.addWidget(toggle_console)
         left.addWidget(self.out, 0)  # sin stretch para respetar el máximo de altura
 
-        # Right: links + copiers
+        # Right: tareas
         right = QVBoxLayout()
         right.setSpacing(8)
-        right.addWidget(self._hlabel("Accesos"))
-        for lk in proc.links:
-            btn = QPushButton(f"🔗 {lk.title}")
-            btn.setObjectName("LinkButton")
-            btn.clicked.connect(lambda _=None, t=lk.target: self._open(t))
-            right.addWidget(btn)
-
-        if getattr(proc, "copiers", None):
-            right.addWidget(self._hlabel("Copiadores"))
-            for cp in proc.copiers:
-                btn = QPushButton(f"📥 {cp.title}")
-                btn.clicked.connect(lambda _=None, x=cp: self._runner_copy(x))
-                right.addWidget(btn)
-
-        if getattr(proc, "scripts", None):
-            right.addWidget(self._hlabel("Scripts"))
-            for s in proc.scripts:
-                right.addWidget(self._script_row(s))
-
+        lbl_tasks = QLabel("Tasks")
+        lbl_tasks.setObjectName("RunTitle")
+        right.addWidget(lbl_tasks)
+        placeholder = QLabel("Aquí irá la sección de tareas en la versión 2.0")
+        placeholder.setAlignment(Qt.AlignCenter)
+        right.addWidget(placeholder, 1)
         right.addStretch()
-
         root.addLayout(left, 2)
         root.addLayout(right, 1)
+        self._refresh_toolbar_access_actions()
 
     def _save_description(self):
         # capture HTML so bold and indentation are preserved
@@ -236,25 +257,6 @@ class ProjectViewWindow(QMainWindow):
         if self.statusBar():
             self.statusBar().showMessage("Descripción guardada", 2000)
 
-    def _hlabel(self, text) -> QLabel:
-        lbl = QLabel(text)
-        lbl.setStyleSheet("color:#cfd6d6; font-weight:700;")
-        return lbl
-
-    def _script_row(self, s: "ScriptItem") -> QWidget:
-        w = QFrame()
-        h = QVBoxLayout(w) if False else QHBoxLayout(w)
-        h.setContentsMargins(0, 0, 0, 0)
-        h.setSpacing(6)
-        lbl = QLabel(f"{Path(s.path).name}  {s.args}".strip())
-        lbl.setToolTip(s.path)
-        btn = QPushButton("▶️ Run")
-        btn.setObjectName("Run")
-        btn.clicked.connect(lambda: self._run_script(s))
-        h.addWidget(lbl, 1)
-        h.addWidget(btn)
-        return w
-
     def _run_script(self, s: "ScriptItem"):
         if not s.path or not Path(s.path).exists():
             QMessageBox.warning(self, "Run", f"No existe el script:\n{s.path}")
@@ -285,7 +287,210 @@ class ProjectViewWindow(QMainWindow):
 
         QTimer.singleShot(10, _collect)
 
+
+    def _add_script_dialog(self):
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Nuevo script")
+        v = QVBoxLayout(dlg)
+        p = QLineEdit()
+        p.setPlaceholderText("Ruta al script (.py)")
+        a = QLineEdit()
+        a.setPlaceholderText("Argumentos (opcional)")
+        w = QLineEdit()
+        w.setPlaceholderText("Directorio de trabajo (opcional)")
+        rowp = QHBoxLayout()
+        rowp.addWidget(p, 1)
+        btnp = QPushButton("Buscar…")
+        btnp.clicked.connect(lambda: self._browse_file_into(p, "Python (*.py)"))
+        rowp.addWidget(btnp)
+        roww = QHBoxLayout()
+        roww.addWidget(w, 1)
+        btnw = QPushButton("Carpeta…")
+        btnw.clicked.connect(lambda: self._browse_dir_into(w))
+        roww.addWidget(btnw)
+        v.addWidget(QLabel("Ruta del script:"))
+        v.addLayout(rowp)
+        v.addWidget(QLabel("Argumentos:"))
+        v.addWidget(a)
+        v.addWidget(QLabel("Workdir:"))
+        v.addLayout(roww)
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        v.addWidget(btns)
+        dlg.setStyleSheet(
+            "QDialog{background:#1b2224;} QLabel{color:#EFEDE1;} QLineEdit{background:#1D2927;color:#EFEDE1;border:1px solid #2e3b3f;border-radius:8px;padding:6px 8px;} QPushButton{padding:6px 10px;}"
+        )
+        btns.accepted.connect(lambda: self._script_dialog_accept(dlg, p, a, w))
+        btns.rejected.connect(dlg.reject)
+        dlg.exec()
+
+    def _script_dialog_accept(self, dlg, p: QLineEdit, a: QLineEdit, w: QLineEdit):
+        path = p.text().strip()
+        if not path:
+            QMessageBox.warning(self, "Script", "Selecciona la ruta del script.")
+            return
+        from app.models.project_models import ScriptItem
+
+        s = ScriptItem(
+            path=path, args=a.text().strip(), workdir=(w.text().strip() or None)
+        )
+        self.proc.scripts.append(s)
+        self._refresh_toolbar_access_actions()
+        self._notify_proc_updated()
+        dlg.accept()
+
+    def _add_link_dialog(self):
+        d = QDialog(self)
+        d.setWindowTitle("Nuevo acceso")
+        v = QVBoxLayout(d)
+        t = QLineEdit()
+        t.setPlaceholderText("Título")
+        u = QLineEdit()
+        u.setPlaceholderText("URL o ruta")
+        row = QHBoxLayout()
+        row.addWidget(u, 1)
+        btn = QPushButton("Buscar…")
+        btn.clicked.connect(lambda: self._browse_any_into(u))
+        row.addWidget(btn)
+        v.addWidget(QLabel("Título:"))
+        v.addWidget(t)
+        v.addWidget(QLabel("Destino:"))
+        v.addLayout(row)
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        v.addWidget(btns)
+        d.setStyleSheet(
+            "QDialog{background:#1b2224;} QLabel{color:#EFEDE1;} QLineEdit{background:#1D2927;color:#EFEDE1;border:1px solid #2e3b3f;border-radius:8px;padding:6px 8px;} QPushButton{padding:6px 10px;}"
+        )
+        btns.accepted.connect(lambda: self._link_dialog_accept(d, t, u))
+        btns.rejected.connect(d.reject)
+        d.exec()
+
+    def _link_dialog_accept(self, dlg, t: QLineEdit, u: QLineEdit):
+        title = t.text().strip()
+        target = u.text().strip()
+        if not title:
+            QMessageBox.warning(self, "Acceso", "Escribe un título.")
+            return
+        if not target:
+            QMessageBox.warning(self, "Acceso", "Escribe una URL o ruta.")
+            return
+        if not (
+            target.lower().startswith(("http://", "https://")) or os.path.exists(target)
+        ):
+            ret = QMessageBox.question(
+                self,
+                "Confirmar",
+                "El destino no parece válido.\n¿Guardar de todos modos?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if ret != QMessageBox.Yes:
+                return
+        from app.models.project_models import LinkItem
+
+        lk = LinkItem(title=title, target=target)
+        self.proc.links.append(lk)
+        self._refresh_toolbar_access_actions()
+        self._notify_proc_updated()
+        dlg.accept()
+
+    def _add_copier_dialog(self):
+        d = QDialog(self)
+        d.setWindowTitle("Nuevo copiador")
+        v = QVBoxLayout(d)
+        t = QLineEdit()
+        t.setPlaceholderText("Título (ej. CSV a Input)")
+        td = QLineEdit()
+        td.setPlaceholderText("Carpeta destino")
+        hd = QLineEdit()
+        hd.setPlaceholderText("Carpeta histórico (opcional)")
+        pt = QLineEdit()
+        pt.setPlaceholderText("Patrón (ej. *.csv)")
+        row_td = QHBoxLayout()
+        row_td.addWidget(td, 1)
+        bt_td = QPushButton("Carpeta…")
+        bt_td.clicked.connect(lambda: self._browse_dir_into(td))
+        row_td.addWidget(bt_td)
+        row_hd = QHBoxLayout()
+        row_hd.addWidget(hd, 1)
+        bt_hd = QPushButton("Carpeta…")
+        bt_hd.clicked.connect(lambda: self._browse_dir_into(hd))
+        row_hd.addWidget(bt_hd)
+        v.addWidget(QLabel("Título:"))
+        v.addWidget(t)
+        v.addWidget(QLabel("Carpeta destino:"))
+        v.addLayout(row_td)
+        v.addWidget(QLabel("Carpeta histórico:"))
+        v.addLayout(row_hd)
+        v.addWidget(QLabel("Patrón:"))
+        v.addWidget(pt)
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        v.addWidget(btns)
+        d.setStyleSheet(
+            "QDialog{background:#1b2224;} QLabel{color:#EFEDE1;} QLineEdit{background:#1D2927;color:#EFEDE1;border:1px solid #2e3b3f;border-radius:8px;padding:6px 8px;} QPushButton{padding:6px 10px;}"
+        )
+        btns.accepted.connect(lambda: self._copier_dialog_accept(d, t, td, hd, pt))
+        btns.rejected.connect(d.reject)
+        d.exec()
+
+    def _copier_dialog_accept(
+        self, dlg, t: QLineEdit, td: QLineEdit, hd: QLineEdit, pt: QLineEdit
+    ):
+        title = t.text().strip()
+        target_dir = td.text().strip()
+        history_dir = hd.text().strip()
+        pattern = pt.text().strip() or "*.csv"
+        if not title:
+            QMessageBox.warning(self, "Copiador", "Escribe un título.")
+            return
+        if not target_dir:
+            QMessageBox.warning(self, "Copiador", "Define la carpeta destino.")
+            return
+        from app.models.project_models import CopierItem
+
+        cp = CopierItem(
+            title=title, target_dir=target_dir, history_dir=history_dir, pattern=pattern
+        )
+        self.proc.copiers.append(cp)
+        self._refresh_toolbar_access_actions()
+        self._notify_proc_updated()
+        dlg.accept()
+
+    def _browse_file_into(self, line_edit: QLineEdit, filter_text: str = "Todos (*.*)"):
+        path, _ = QFileDialog.getOpenFileName(self, "Elegir archivo", str(Path.home()), filter_text)
+        if path:
+            line_edit.setText(path)
+
+    def _browse_any_into(self, line_edit: QLineEdit):
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Elegir archivo (o Cancela para carpeta)", str(Path.home())
+        )
+        if path:
+            line_edit.setText(path)
+            return
+        folder = QFileDialog.getExistingDirectory(
+            self, "Elegir carpeta", str(Path.home())
+        )
+        if folder:
+            line_edit.setText(folder)
+
+    def _browse_dir_into(self, line_edit: QLineEdit):
+        folder = QFileDialog.getExistingDirectory(
+            self, "Elegir carpeta", str(Path.home())
+        )
+        if folder:
+            line_edit.setText(folder)
+
+    def _notify_proc_updated(self):
+        if self.on_save_proc:
+            self.on_save_proc(self.proc)
+
     def _open(self, target: str):
+        try:
+            from app.core.helpers import open_resource_target
+        except ModuleNotFoundError as e:
+            QMessageBox.warning(self, "Abrir", f"No se puede cargar helper: {e}")
+            return
+
         try:
             open_resource_target(target)
         except (OSError, webbrowser.Error) as e:
@@ -327,3 +532,52 @@ class ProjectViewWindow(QMainWindow):
             )
         except OSError as e:
             QMessageBox.critical(self, "Copiar", f"Error: {e}")
+
+    def _refresh_toolbar_access_actions(self):
+        spacer = getattr(self, "_spacer_action", None)
+        if spacer is None:
+            return
+        for act in getattr(self, "_access_actions", []):
+            self.access_toolbar.removeAction(act)
+        self._access_actions = []
+
+        def add(text: str, target_callable):
+            act = QAction(text, self)
+            act.triggered.connect(target_callable)
+            self.access_toolbar.insertAction(spacer, act)
+            self._access_actions.append(act)
+
+        for lk in self.proc.links:
+            add(f"🔗 {lk.title}", lambda _=None, t=lk.target: self._open(t))
+        for cp in self.proc.copiers:
+            add(f"🗄️ {cp.title}", lambda _=None, x=cp: self._runner_copy(x))
+        for s in self.proc.scripts:
+            script_name = Path(s.path).name or s.path
+            add(f"▶ {script_name}", lambda _=None, script=s: self._run_script(script))
+
+
+if __name__ == "__main__":
+    PROJECT_ROOT = Path(__file__).resolve().parents[3]
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+
+    from app.models.project_models import (
+        CopierItem,
+        LinkItem,
+        ProcessDef,
+        ScriptItem,
+    )
+
+    app = QApplication(sys.argv)
+    sample_proc = ProcessDef(
+        id="demo",
+        name="Demo Project",
+        description="Escribe aquí una descripción del proyecto.",
+        is_pinned=True,
+        links=[LinkItem(title="Documentación", target="https://example.com")],
+        scripts=[ScriptItem(path=__file__)],
+        copiers=[CopierItem(title="Copiar muestra", target_dir=str(Path.home()))],
+    )
+    window = ProjectViewWindow(sample_proc)
+    window.show()
+    sys.exit(app.exec())
