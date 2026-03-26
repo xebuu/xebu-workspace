@@ -7,7 +7,6 @@ from typing import Optional
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
-    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -23,7 +22,8 @@ class NewProjectWindow(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Nuevo proyecto")
         self.setModal(True)
-        self.resize(720, 400)
+        self.resize(720, 320)
+        self.setStyleSheet("QDialog { background: #1E1E1E; }")
 
         self.proc = existing or ProcessDef(
             id=str(uuid.uuid4()),
@@ -36,25 +36,15 @@ class NewProjectWindow(QDialog):
         )
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(12)
+        root.setContentsMargins(16, 8, 16, 8)
+        root.setSpacing(8)
 
-        container = QFrame()
-        container.setObjectName("NewProjectContainer")
-        container.setFrameShape(QFrame.StyledPanel)
-        container.setFrameShadow(QFrame.Raised)
-        container.setStyleSheet(
-            "QFrame#NewProjectContainer { background:#1f2125; border-radius:12px; border:1px solid #4A4A4A; } "
-            "QLabel { color:#EFEDE1; }"
-        )
-
-        container_layout = QVBoxLayout(container)
-        container_layout.setContentsMargins(14, 14, 14, 14)
-        container_layout.setSpacing(10)
+        self.setStyleSheet("QDialog { background:#2d2d2d; } QLabel { color:#EFEDE1; }")
 
         title = QLabel("Nuevo proyecto")
         title.setObjectName("RunTitle")
-        container_layout.addWidget(title)
+        title.setContentsMargins(0, 0, 0, 4)
+        root.addWidget(title)
 
         row = QHBoxLayout()
         row.setSpacing(8)
@@ -62,7 +52,7 @@ class NewProjectWindow(QDialog):
         self.edt_name = QLineEdit(self.proc.name)
         self.edt_name.setPlaceholderText("Nombre del proyecto")
         row.addWidget(self.edt_name)
-        container_layout.addLayout(row)
+        root.addLayout(row)
 
         self.edt_desc = QTextEdit()
         self.edt_desc.setPlaceholderText("Descripción del proyecto")
@@ -75,9 +65,7 @@ class NewProjectWindow(QDialog):
                 self.edt_desc.setPlainText(description)
         else:
             self.edt_desc.setPlainText(str(description))
-        container_layout.addWidget(self.edt_desc)
-
-        root.addWidget(container)
+        root.addWidget(self.edt_desc)
 
         btns = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         btns.button(QDialogButtonBox.Save).setText("Guardar")
