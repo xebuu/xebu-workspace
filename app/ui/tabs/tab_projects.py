@@ -26,7 +26,7 @@ from app.models.project_models import ProcessDef
 from app.database.project_repository import ProjectsRepository
 from app.ui.widgets.search_bars import ProjectSearchBar
 from app.ui.windows.w_archived_projects import ArchivedProjectWindow
-from app.ui.windows.w_project_editor import ProjectEditorWindow
+from app.ui.windows.w_new_project import NewProjectWindow
 from app.ui.windows.w_ProjectViewer import ProjectViewWindow
 
 
@@ -226,14 +226,14 @@ class ProjectManagerTab(QMainWindow):
         self._persist_process(proc)
 
     def _open_builder_new(self):
-        dlg = ProjectEditorWindow(parent=self)
+        dlg = NewProjectWindow(parent=self)
         if dlg.exec() == QDialog.Accepted:
             new_proc = dlg.result_process()
             self._persist_process(new_proc)
             self._render()
 
     def _open_builder_edit(self, proc: ProcessDef):
-        dlg = ProjectEditorWindow(existing=proc, parent=self)
+        dlg = NewProjectWindow(existing=proc, parent=self)
         if dlg.exec() == QDialog.Accepted:
             updated = dlg.result_process()
             self._persist_process(updated)
