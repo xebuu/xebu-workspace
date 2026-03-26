@@ -5,13 +5,14 @@ import os
 import shutil
 import subprocess
 import sys
+import uuid
 import webbrowser
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QFont, QAction
+from PySide6.QtGui import QAction, QFont
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -34,6 +35,8 @@ from PySide6.QtWidgets import (
     QWidget,
     QToolBar,
 )
+
+from app.database.tasks_repository import TasksRepository
 
 if TYPE_CHECKING:
     from app.models.project_models import (
@@ -73,6 +76,9 @@ class ProjectViewWindow(QMainWindow):
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self._spacer_action = toolbar.addWidget(spacer)
         self._access_actions: list[QAction] = []
+        self.tasks_repo = TasksRepository()
+        self.tasks = self.tasks_repo.list_all()
+        self.tasks_repo.reset_daily_if_needed(self.tasks)
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -181,13 +187,47 @@ class ProjectViewWindow(QMainWindow):
         # Right: tareas
         right = QVBoxLayout()
         right.setSpacing(8)
+        task_container = QFrame()
+        task_container.setObjectName("TaskContainer")
+        task_container.setFrameShape(QFrame.StyledPanel)
+        task_container.setFrameShadow(QFrame.Raised)
+        task_container.setStyleSheet(
+            "QFrame#TaskContainer { background:#2e2e2e ; border-radius:12px; border:1px solid #4A4A4A; }"
+        )
+        container_layout = QVBoxLayout(task_container)
+        container_layout.setContentsMargins(12, 12, 12, 12)
+        container_layout.setSpacing(8)
+
+        title_row = QHBoxLayout()
         lbl_tasks = QLabel("Tasks")
         lbl_tasks.setObjectName("RunTitle")
-        right.addWidget(lbl_tasks)
-        placeholder = QLabel("Aquí irá la sección de tareas en la versión 2.0")
-        placeholder.setAlignment(Qt.AlignCenter)
-        right.addWidget(placeholder, 1)
-        right.addStretch()
+        title_row.addWidget(lbl_tasks)
+        title_row.addStretch()
+        container_layout.addLayout(title_row)
+
+        search_row = QHBoxLayout()
+        self.task_input = QLineEdit()
+        self.task_input.setPlaceholderText("Agregar tarea rápida")
+        self.task_input.returnPressed.connect(self._add_quick_task)
+        btn_task_add = QPushButton("Agregar")
+        btn_task_add.clicked.connect(self._add_quick_task)
+        search_row.addWidget(self.task_input)
+        search_row.addWidget(btn_task_add)
+        container_layout.addLayout(search_row)
+
+        self.task_scroll = QScrollArea()
+        self.task_scroll.setWidgetResizable(True)
+        self.task_scroll.setMaximumHeight(300)
+        self.task_wrapper = QWidget()
+        self.task_layout = QVBoxLayout(self.task_wrapper)
+        self.task_layout.setContentsMargins(8, 8, 8, 8)
+        self.task_layout.setSpacing(8)
+        self.task_scroll.setWidget(self.task_wrapper)
+        container_layout.addWidget(self.task_scroll, 1)
+        container_layout.addStretch(1)
+
+        right.addWidget(task_container, 1)
+        self._render_tasks()
         root.addLayout(left, 2)
         root.addLayout(right, 1)
         self._refresh_toolbar_access_actions()
@@ -480,9 +520,135 @@ class ProjectViewWindow(QMainWindow):
         if folder:
             line_edit.setText(folder)
 
+    def _add_quick_task(self):
+        text = self.task_input.text().strip()
+        if not text:
+            return
+        new_task = {
+            "id": str(uuid.uuid4()),
+            "tarea": text,
+            "completado": False,
+            "diaria": False,
+            "ultima_actualizacion": str(datetime.now().date()),
+            "deadline": "",
+            "prioridad": "media",
+        }
+        self.tasks.append(new_task)
+        self.tasks_repo.save_all(self.tasks)
+        self.task_input.clear()
+        self._render_tasks()
+
+    def _render_tasks(self):
+        for i in reversed(range(self.task_layout.count())):
+            widget = self.task_layout.itemAt(i).widget()
+            if widget:
+                widget.deleteLater()
+        if not self.tasks:
+            empty = QLabel("No hay tareas registradas.")
+            empty.setAlignment(Qt.AlignCenter)
+            self.task_layout.addWidget(empty, 1)
+            self.task_layout.addStretch(1)
+            return
+        for task in self.tasks:
+            row = _MiniTaskRow(
+                task,
+                on_toggle=self._toggle_task,
+                on_delete=self._delete_task,
+                parent=self,
+            )
+            self.task_layout.addWidget(row)
+        self.task_layout.addStretch(1)
+
+    def _toggle_task(self, task: dict):
+        task["completado"] = not task.get("completado", False)
+        task["ultima_actualizacion"] = str(datetime.now().date())
+        self.tasks_repo.save_all(self.tasks)
+        self._render_tasks()
+
+    def _delete_task(self, task: dict):
+        self.tasks = [t for t in self.tasks if t.get("id") != task.get("id")]
+        self.tasks_repo.save_all(self.tasks)
+        self._render_tasks()
+
+    def _refresh_toolbar_access_actions(self):
+        spacer = getattr(self, "_spacer_action", None)
+        if spacer is None:
+            return
+        for act in getattr(self, "_access_actions", []):
+            self.access_toolbar.removeAction(act)
+        self._access_actions = []
+
+        def add(text: str, target_callable):
+            act = QAction(text, self)
+            act.triggered.connect(target_callable)
+            self.access_toolbar.insertAction(spacer, act)
+            self._access_actions.append(act)
+
+        for lk in self.proc.links:
+            add(f"🔗 {lk.title}", lambda _=None, t=lk.target: self._open(t))
+        for cp in self.proc.copiers:
+            add(f"🗄️ {cp.title}", lambda _=None, x=cp: self._runner_copy(x))
+        for s in self.proc.scripts:
+            script_name = Path(s.path).name or s.path
+            add(f"▶ {script_name}", lambda _=None, script=s: self._run_script(script))
+
     def _notify_proc_updated(self):
         if self.on_save_proc:
             self.on_save_proc(self.proc)
+
+
+class _MiniTaskRow(QFrame):
+    def __init__(self, task: dict, on_toggle, on_delete, parent=None):
+        super().__init__(parent)
+        self.task = task
+        self.on_toggle = on_toggle
+        self.on_delete = on_delete
+
+        self.setObjectName("TaskRowMini")
+        self.setFrameShape(QFrame.StyledPanel)
+        self.setFrameShadow(QFrame.Raised)
+        self.setStyleSheet(
+            "QFrame#TaskRowMini { background:#2d2d2d; border-radius:8px; border:1px solid transparent; }"
+        )
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(8, 6, 8, 6)
+        lay.setSpacing(6)
+
+        self.lbl = QLabel()
+        self.lbl.setWordWrap(True)
+        self.btn_toggle = QPushButton()
+        self.btn_toggle.setFixedWidth(32)
+        btn_delete = QPushButton("✕")
+        btn_delete.setFixedWidth(32)
+
+        self.btn_toggle.clicked.connect(lambda: self.on_toggle(task))
+        btn_delete.clicked.connect(lambda: self.on_delete(task))
+
+        lay.addWidget(self.lbl, 1)
+        lay.addWidget(self.btn_toggle)
+        lay.addWidget(btn_delete)
+
+        self.update_state()
+
+    def update_state(self):
+        done = self.task.get("completado", False)
+        self.btn_toggle.setText("☑" if done else "☐")
+        self.lbl.setText(self._format_text())
+
+    def _format_text(self) -> str:
+        text = self.task.get("tarea", "")
+        details = text
+        deadline = (self.task.get("deadline") or "").strip()
+        if deadline:
+            details += f" (vencimiento {deadline})"
+        if self.task.get("diaria"):
+            details += " • diaria"
+        prioridad = (self.task.get("prioridad") or "media").lower()
+        if prioridad == "alta":
+            details += " • prioridad alta"
+        elif prioridad == "baja":
+            details += " • prioridad baja"
+        return details
 
     def _open(self, target: str):
         try:
@@ -532,29 +698,6 @@ class ProjectViewWindow(QMainWindow):
             )
         except OSError as e:
             QMessageBox.critical(self, "Copiar", f"Error: {e}")
-
-    def _refresh_toolbar_access_actions(self):
-        spacer = getattr(self, "_spacer_action", None)
-        if spacer is None:
-            return
-        for act in getattr(self, "_access_actions", []):
-            self.access_toolbar.removeAction(act)
-        self._access_actions = []
-
-        def add(text: str, target_callable):
-            act = QAction(text, self)
-            act.triggered.connect(target_callable)
-            self.access_toolbar.insertAction(spacer, act)
-            self._access_actions.append(act)
-
-        for lk in self.proc.links:
-            add(f"🔗 {lk.title}", lambda _=None, t=lk.target: self._open(t))
-        for cp in self.proc.copiers:
-            add(f"🗄️ {cp.title}", lambda _=None, x=cp: self._runner_copy(x))
-        for s in self.proc.scripts:
-            script_name = Path(s.path).name or s.path
-            add(f"▶ {script_name}", lambda _=None, script=s: self._run_script(script))
-
 
 if __name__ == "__main__":
     PROJECT_ROOT = Path(__file__).resolve().parents[3]
