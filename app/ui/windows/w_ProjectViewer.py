@@ -165,24 +165,12 @@ class ProjectViewWindow(QMainWindow):
         # header_frame added earlier above, no need for TextEditHeader layout
         left.addWidget(scrollDesc)
 
-        # --- Consola compacta + toggle (cambios mínimos) ---
-        toggle_console = QPushButton("Ocultar consola")
-        toggle_console.setCheckable(True)
-
         self.out = QTextEdit()
         self.out.setReadOnly(True)
         self.out.setPlaceholderText("Salida del proceso…")
-        self.out.setMaximumHeight(220)  # hace la consola más pequeña
+        self.out.setMaximumHeight(220)
 
-        toggle_console.toggled.connect(
-            lambda on: (
-                self.out.setVisible(not on),
-                toggle_console.setText("Mostrar consola" if on else "Ocultar consola"),
-            )
-        )
-
-        left.addWidget(toggle_console)
-        left.addWidget(self.out, 0)  # sin stretch para respetar el máximo de altura
+        self._configure_console_section(left)
 
         # Right: tareas
         right = QVBoxLayout()
@@ -326,6 +314,23 @@ class ProjectViewWindow(QMainWindow):
             self.out.append(out or "(sin salida)")
 
         QTimer.singleShot(10, _collect)
+
+    def _configure_console_section(self, layout: QVBoxLayout):
+        toggle_console = QPushButton("Ocultar consola")
+        toggle_console.setCheckable(True)
+        toggle_console.toggled.connect(
+            lambda on: (
+                self.out.setVisible(not on),
+                toggle_console.setText("Mostrar consola" if on else "Ocultar consola"),
+            )
+        )
+
+        has_scripts = bool(getattr(self.proc, "scripts", []))
+        if has_scripts:
+            layout.addWidget(toggle_console)
+            layout.addWidget(self.out, 0)
+        else:
+            self.out.hide()
 
 
     def _add_script_dialog(self):
