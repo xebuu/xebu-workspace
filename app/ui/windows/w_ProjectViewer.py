@@ -89,12 +89,21 @@ class ProjectViewWindow(QMainWindow):
 
         # ==== Left: Description + scripts + output ====
         left = QVBoxLayout()
-        left.setSpacing(4)  # less gap between sections
+        left.setSpacing(4)
+        desc_container = QFrame()
+        desc_container.setObjectName("DescContainer")
+        desc_container.setFrameShape(QFrame.StyledPanel)
+        desc_container.setFrameShadow(QFrame.Raised)
+        desc_container.setStyleSheet(
+            "QFrame#DescContainer { background:#2d2d2d; border-radius:12px; border:1px solid #4A4A4A; }"
+        )
+        desc_layout = QVBoxLayout(desc_container)
+        desc_layout.setContentsMargins(12, 12, 12, 12)
+        desc_layout.setSpacing(8)
+
         title = QLabel(proc.name)
         title.setObjectName("RunTitle")
-
-        # ===== Left: title and botones para edición de texto ==========
-        left.addWidget(title)
+        desc_layout.addWidget(title)
 
         # enmarcamos los controles en un QFrame para separarlos visualmente
         header_frame = QFrame()
@@ -106,7 +115,6 @@ class ProjectViewWindow(QMainWindow):
 
         # text formatting controls
         btn_bold = QPushButton("N")  # Negrita
-        # show bold letter on button itself
         bold_font = QFont()
         bold_font.setBold(True)
         btn_bold.setFont(bold_font)
@@ -116,24 +124,19 @@ class ProjectViewWindow(QMainWindow):
         self.btn_bold = btn_bold
         header_layout.addWidget(btn_bold)
 
-        # size selector (simple dropdown with few point sizes)
         self.size_selector = QComboBox()
         for sz in (8, 12, 16, 20):
             self.size_selector.addItem(str(sz))
         self.size_selector.setToolTip("Tamaño de texto / Font size")
-        # use text-based signal since activated(int) is the only overload available
         self.size_selector.currentTextChanged.connect(self._change_font_size)
         header_layout.addWidget(self.size_selector)
-        # update formatting state when cursor moves
-        # (connect after creating QTextEdit below)
 
         btn_save = QPushButton("💾 Guardar")
         btn_save.clicked.connect(self._save_description)
         header_layout.addWidget(btn_save)
         header_layout.addStretch(8)
 
-        # insert the frame into the left layout
-        left.addWidget(header_frame)
+        desc_layout.addWidget(header_frame)
 
         # --- Descripción con scroll (cambio mínimo) ---
         self.desc = QTextEdit()
@@ -159,11 +162,10 @@ class ProjectViewWindow(QMainWindow):
         scrollDesc.setWidgetResizable(True)
         scrollDesc.setFrameShape(QFrame.NoFrame)
         scrollDesc.setContentsMargins(0, 0, 0, 0)
-        scrollDesc.setMaximumHeight(500)  # ajusta si quieres
+        scrollDesc.setMaximumHeight(500)
         scrollDesc.setWidget(self.desc)
-
-        # header_frame added earlier above, no need for TextEditHeader layout
-        left.addWidget(scrollDesc)
+        desc_layout.addWidget(scrollDesc)
+        left.addWidget(desc_container)
 
         self.out = QTextEdit()
         self.out.setReadOnly(True)
