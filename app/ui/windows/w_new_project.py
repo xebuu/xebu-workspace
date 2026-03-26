@@ -60,12 +60,12 @@ class NewProjectWindow(QDialog):
         row.setSpacing(8)
         row.addWidget(QLabel("Nombre:"))
         self.edt_name = QLineEdit(self.proc.name)
-        self.edt_name.setPlaceholderText("Nombre del proceso")
+        self.edt_name.setPlaceholderText("Nombre del proyecto")
         row.addWidget(self.edt_name)
         container_layout.addLayout(row)
 
         self.edt_desc = QTextEdit()
-        self.edt_desc.setPlaceholderText("Descripción del proceso")
+        self.edt_desc.setPlaceholderText("Descripción del proyecto")
         self.edt_desc.setFixedHeight(200)
         description = self.proc.description or ""
         if isinstance(description, str):
@@ -80,6 +80,8 @@ class NewProjectWindow(QDialog):
         root.addWidget(container)
 
         btns = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        btns.button(QDialogButtonBox.Save).setText("Guardar")
+        btns.button(QDialogButtonBox.Cancel).setText("Cancelar")
         btns.accepted.connect(self._on_accept)
         btns.rejected.connect(self.reject)
         root.addWidget(btns)
