@@ -47,3 +47,4 @@ ideas.txt
 tests/
 notes/
 
+*.db

@@ -7,7 +7,7 @@ This repository is a local-first PySide6 desktop application for project and tas
 The codebase is small, but it already has a few mixed patterns:
 
 - Newer persistence code uses SQLite repositories under `app/database/`.
-- Bitacora still uses CSV through `app/utility/database.py`.
+- A few legacy CSV compatibility paths still exist, but Bitacora now uses SQLite through `app/database/bitacora_repository.py`.
 - UI is split across tabs, windows, and widgets, with a large amount of feature logic living directly in Qt classes.
 
 When changing behavior, prefer understanding the full feature path first: UI event -> in-memory mutation -> repository write -> rerender.
@@ -16,7 +16,7 @@ When changing behavior, prefer understanding the full feature path first: UI eve
 
 Entry path:
 
-- `main.py` imports `run()` from `app.ui.main_window`.
+- `main.py` calls `app.initialize_application()` and then imports/runs the UI entrypoint from `app.ui.main_window`.
 - `app/ui/main_window.py` creates `QApplication`, builds `MainWindow`, and lazily instantiates the three main tabs.
 
 Primary UI shell:
@@ -37,6 +37,7 @@ Persistence:
 - `app/database/schema.py` defines the DDL.
 - `app/database/migrations.py` applies versioned schema creation.
 - Repositories are thin wrappers that mostly store JSON payloads in SQLite tables.
+- Bitacora entries now live in the `bitacora_entries` SQLite table.
 
 Data model:
 
@@ -68,6 +69,7 @@ Application package:
 - `app/models/`: project dataclasses.
 - `app/ui/`: main shell, tabs, widgets, feature windows.
 - `app/utility/`: legacy CSV persistence for bitacora.
+- `app/utility/`: mostly legacy utility code; avoid adding new persistence here.
 - `app/assets/style.qss`: shared stylesheet loaded by the main window.
 
 ## Important Paths And Storage
@@ -88,7 +90,7 @@ Current persistent files:
 
 - SQLite DB: `get_db_path("xebu_workspace.db")`
 - Archived tasks CSV seed file: `ARCHIVED_TASKS_CSV`
-- Bitacora CSV: `BITACORA_CSV`
+- Bitacora CSV compatibility file: `BITACORA_CSV`
 
 Code/assets paths:
 
@@ -97,23 +99,15 @@ Code/assets paths:
 
 ## Startup Reality
 
-There is an architectural intent and a current runtime path, and they are not fully the same.
+Startup is now centralized in the intended place:
 
-Intended startup:
+- `main.py` calls `app.initialize_application()` before launching the UI.
+- `initialize_application()` ensures the SQLite schema exists and applies the saved theme.
 
-- `app.initialize_application()` should initialize the SQLite schema and apply the saved theme.
+Important nuance:
 
-Current startup:
-
-- `main.py` directly calls `app.ui.main_window.run()`.
-- `run()` builds the UI without calling `initialize_application()`.
-- In practice, repositories self-heal by creating tables on demand, so the app still works.
-
-Implication:
-
-- Do not assume the whole schema is created eagerly at startup.
-- Do not assume the saved theme is applied before the first window is shown.
-- If you refactor startup, verify whether `initialize_application()` should be invoked centrally.
+- Repositories still defensively create their own tables on demand, so feature modules remain resilient even if startup flow changes in the future.
+- If you change initialization behavior, verify both schema creation and theme restoration together.
 
 ## Feature Ownership By Module
 
@@ -141,7 +135,8 @@ Toolbar shortcuts:
 Bitacora:
 
 - `app/ui/windows/w_bitacora.py`
-- `app/utility/database.py`
+- `app/database/bitacora_repository.py`
+- `app/ui/windows/w_bitacora.py` also contains the lightweight Bitacora viewer window
 
 Settings/theme:
 
@@ -170,8 +165,9 @@ Toolbar items:
 
 Bitacora:
 
-1. UI appends rows to `bitacora.csv`.
-2. No SQLite repository exists yet for this feature.
+1. UI appends entries through `BitacoraRepository`.
+2. Entries are stored in SQLite in `bitacora_entries`.
+3. If the SQLite table is empty and the legacy CSV exists, the repository seeds entries from `BITACORA_CSV` without deleting the file.
 
 ## Conventions That Matter
 
@@ -186,13 +182,12 @@ Bitacora:
 These are worth checking before and after edits:
 
 - `ProjectViewWindow` includes methods that appear misplaced inside `_MiniTaskRow` at the bottom of `app/ui/windows/w_ProjectViewer.py`, including `_open()` and `_runner_copy()`. The repo TODO also mentions broken link opening there.
-- `main.py` bypasses `app.initialize_application()`.
 - Tasks are not consistently updated by unique ID everywhere:
   - `CalendarTab` toggles/deletes by matching task text (`tarea`), which can affect duplicate task names.
   - `TasksWindow` often mutates in-memory objects directly and relies on object identity in the widget map.
 - `TasksRepository.save_all()` rewrites the whole tasks table every time.
 - `ArchivedTasksRepository.append_task()` always returns `(True, "")` after insert; error handling is minimal.
-- `BitacoraWindow` still depends on the legacy CSV repo under `app/utility/`.
+- Bitacora uses SQLite now, but legacy CSV import is intentionally one-way and only runs when the table is empty.
 - Some files contain mojibake in UI strings. Be careful with file encodings and avoid making accidental encoding churn.
 
 ## Working Safely In This Repo
@@ -206,7 +201,7 @@ Before editing:
 When changing persistence:
 
 - Update both repository behavior and the UI assumptions that call it.
-- Be careful with legacy CSV compatibility for bitacora and archived tasks.
+- Be careful with legacy CSV compatibility for archived tasks and Bitacora import.
 - Preserve current payload shapes unless you are also handling migration.
 
 When changing tasks:
@@ -222,6 +217,7 @@ When changing projects:
 When changing startup/theme:
 
 - Check `main.py`, `app/__init__.py`, `app/core/theme.py`, and `ConfiguracionTab` together.
+- Do not assume a theme-only change is isolated from schema/bootstrap behavior.
 
 ## Suggested Development Workflow
 
@@ -238,7 +234,7 @@ Package:
 pyinstaller --noconfirm --clean XebuWorkspace.spec
 ```
 
-There are currently no repo-local tests in this checkout, All CI/CD ocurrs in Github.
+There are currently no repo-local tests in this checkout; CI/CD happens in GitHub.
 
 ## Manual Verification Checklist
 
@@ -272,10 +268,8 @@ For storage/path changes:
 
 If you need to improve the codebase without changing product scope too much, these are high-value targets:
 
-- Centralize startup around `initialize_application()`.
 - Fix `ProjectViewWindow` toolbar action ownership and the misplaced `_MiniTaskRow` methods.
 - Normalize task operations around unique task IDs across all views.
-- Move bitacora from CSV into SQLite, matching the rest of the app.
 - Reduce duplicated task rendering/manipulation logic between `TasksWindow` and `CalendarTab`.
 
 ## Files To Read First For Most Tasks
@@ -290,4 +284,3 @@ If you need to improve the codebase without changing product scope too much, the
 - `app/ui/windows/w_tasks.py`
 - `app/ui/tabs/tab_calendar.py`
 - `TODO.md`
-
