@@ -5,13 +5,14 @@ from sqlite3 import Connection
 from app.database.schema import (
     create_archived_tasks_table,
     create_base_schema,
+    create_bitacora_entries_table,
     create_projects_table,
     create_settings_table,
     create_tasks_table,
     create_toolbar_table,
 )
 
-CURRENT_SCHEMA_VERSION = 5
+CURRENT_SCHEMA_VERSION = 6
 
 
 def get_applied_version(conn: Connection) -> int:
@@ -54,4 +55,8 @@ def ensure_schema(conn: Connection) -> int:
         create_toolbar_table(conn)
         record_schema_version(conn, 5)
         current = 5
+    if current < 6:
+        create_bitacora_entries_table(conn)
+        record_schema_version(conn, 6)
+        current = 6
     return CURRENT_SCHEMA_VERSION

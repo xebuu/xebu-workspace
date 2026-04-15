@@ -41,6 +41,15 @@ CREATE TABLE IF NOT EXISTS archived_tasks (
 )
 """
 
+BITACORA_ENTRIES_TABLE = """
+CREATE TABLE IF NOT EXISTS bitacora_entries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha TEXT NOT NULL,
+    nota TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+"""
+
 
 TOOLBAR_TABLE = """
 CREATE TABLE IF NOT EXISTS toolbar_items (
@@ -78,6 +87,11 @@ def create_tasks_table(conn: Connection) -> None:
 def create_archived_tasks_table(conn: Connection) -> None:
     """Create the archive table used by ArchivedTasksRepository."""
     conn.execute(ARCHIVED_TASKS_TABLE)
+
+
+def create_bitacora_entries_table(conn: Connection) -> None:
+    """Create the table used by BitacoraRepository."""
+    conn.execute(BITACORA_ENTRIES_TABLE)
 
 
 def create_toolbar_table(conn: Connection) -> None:
