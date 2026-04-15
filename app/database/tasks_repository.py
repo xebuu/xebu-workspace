@@ -5,6 +5,7 @@ import uuid
 from datetime import date as date_cls
 from typing import Callable, List
 
+from app.core.categories import DEFAULT_TASK_CATEGORY, normalize_category
 from app.database.connection import connection_context
 from app.database.schema import create_tasks_table
 
@@ -22,13 +23,22 @@ class TasksRepository:
     TABLE = "tasks"
 
     def _serialize(self, task: dict) -> str:
+        task = dict(task)
         if "id" not in task:
-            task = dict(task)
             task["id"] = str(uuid.uuid4())
+        task["category"] = normalize_category(
+            task.get("category"), DEFAULT_TASK_CATEGORY
+        )
         return json.dumps(task, ensure_ascii=False, separators=(",", ":"))
 
     def _deserialize(self, payload: str) -> dict:
-        return json.loads(payload)
+        task = json.loads(payload)
+        if "id" not in task:
+            task["id"] = str(uuid.uuid4())
+        task["category"] = normalize_category(
+            task.get("category"), DEFAULT_TASK_CATEGORY
+        )
+        return task
 
     @_with_tasks_table
     def list_all(self, *, conn) -> List[dict]:

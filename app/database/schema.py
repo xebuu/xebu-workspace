@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS bitacora_entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     fecha TEXT NOT NULL,
     nota TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'personal',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
 """

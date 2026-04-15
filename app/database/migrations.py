@@ -12,7 +12,7 @@ from app.database.schema import (
     create_toolbar_table,
 )
 
-CURRENT_SCHEMA_VERSION = 6
+CURRENT_SCHEMA_VERSION = 7
 
 
 def get_applied_version(conn: Connection) -> int:
@@ -59,4 +59,14 @@ def ensure_schema(conn: Connection) -> int:
         create_bitacora_entries_table(conn)
         record_schema_version(conn, 6)
         current = 6
+    if current < 7:
+        columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(bitacora_entries)").fetchall()
+        }
+        if "category" not in columns:
+            conn.execute(
+                "ALTER TABLE bitacora_entries ADD COLUMN category TEXT NOT NULL DEFAULT 'personal'"
+            )
+        record_schema_version(conn, 7)
+        current = 7
     return CURRENT_SCHEMA_VERSION

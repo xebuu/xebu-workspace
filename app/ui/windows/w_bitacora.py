@@ -4,6 +4,7 @@ import datetime
 
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import (
+    QComboBox,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -17,6 +18,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.core.categories import (
+    CATEGORY_DEFINITIONS,
+    DEFAULT_BITACORA_CATEGORY,
+    category_label,
+)
 from app.core.theme import theme_manager
 from app.database.bitacora_repository import BitacoraRepository
 
@@ -100,7 +106,10 @@ class BitacoraViewerWindow(QMainWindow):
 
         for entry in self.entries:
             preview = _build_preview(entry.get("nota", ""))
-            item = QListWidgetItem(f"{entry.get('fecha', '')}\n{preview}")
+            category = category_label(
+                entry.get("category"), DEFAULT_BITACORA_CATEGORY
+            )
+            item = QListWidgetItem(f"{entry.get('fecha', '')} • {category}\n{preview}")
             item.setData(Qt.UserRole, entry)
             self.list.addItem(item)
 
@@ -112,7 +121,9 @@ class BitacoraViewerWindow(QMainWindow):
             self.detail_date.setText("Sin entradas")
             self.detail_note.setPlainText("")
             return
-        self.detail_date.setText(entry.get("fecha", "Sin fecha"))
+
+        category = category_label(entry.get("category"), DEFAULT_BITACORA_CATEGORY)
+        self.detail_date.setText(f"{entry.get('fecha', 'Sin fecha')} • {category}")
         self.detail_note.setPlainText(entry.get("nota", ""))
 
 
@@ -141,6 +152,16 @@ class BitacoraWindow(QMainWindow):
         self.edt.installEventFilter(self)
         root.addWidget(self.edt, 1)
 
+        category_row = QHBoxLayout()
+        category_row.addWidget(QLabel("Categoría:"))
+        self.cmb_category = QComboBox()
+        for key in CATEGORY_DEFINITIONS:
+            self.cmb_category.addItem(category_label(key), key)
+        self.cmb_category.setCurrentText(category_label(DEFAULT_BITACORA_CATEGORY))
+        category_row.addWidget(self.cmb_category)
+        category_row.addStretch()
+        root.addLayout(category_row)
+
         theme_manager.theme_changed.connect(lambda _: self._update_highlight())
         self._update_highlight()
 
@@ -161,12 +182,14 @@ class BitacoraWindow(QMainWindow):
 
         today = datetime.date.today().strftime("%d-%m-%Y")
         created_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        ok, err = self.bitacora_repo.append_entry(today, text, created_at)
+        category = self.cmb_category.currentData() or DEFAULT_BITACORA_CATEGORY
+        ok, err = self.bitacora_repo.append_entry(today, text, category, created_at)
         if not ok:
             QMessageBox.critical(self, "Bitácora", f"Error al guardar en SQLite:\n{err}")
             return
 
         self.edt.clear()
+        self.cmb_category.setCurrentText(category_label(DEFAULT_BITACORA_CATEGORY))
         if self._viewer_win is not None:
             self._viewer_win.refresh_entries()
         self.statusBar().showMessage("Entrada agregada a la bitácora", 1500)

@@ -5,6 +5,7 @@ from datetime import datetime
 from sqlite3 import DatabaseError
 from typing import Callable, List, Optional, Tuple
 
+from app.core.categories import DEFAULT_BITACORA_CATEGORY, normalize_category
 from app.core.paths import BITACORA_CSV
 from app.database.connection import connection_context
 from app.database.schema import create_bitacora_entries_table
@@ -30,6 +31,9 @@ class BitacoraRepository:
             "id": row["id"],
             "fecha": row["fecha"],
             "nota": row["nota"],
+            "category": normalize_category(
+                row["category"], DEFAULT_BITACORA_CATEGORY
+            ),
             "created_at": row["created_at"],
         }
 
@@ -74,12 +78,14 @@ class BitacoraRepository:
                 if not fecha or not nota:
                     continue
                 created_at = self._parse_legacy_created_at(fecha, hora)
-                rows_to_insert.append((fecha, nota, created_at))
+                rows_to_insert.append(
+                    (fecha, nota, DEFAULT_BITACORA_CATEGORY, created_at)
+                )
 
         if rows_to_insert:
             conn.executemany(
-                f"""INSERT INTO {self.TABLE} (fecha, nota, created_at)
-                VALUES (?, ?, COALESCE(?, datetime('now')))""",
+                f"""INSERT INTO {self.TABLE} (fecha, nota, category, created_at)
+                VALUES (?, ?, ?, COALESCE(?, datetime('now')))""",
                 rows_to_insert,
             )
 
@@ -89,7 +95,7 @@ class BitacoraRepository:
     def list_entries(self, *, conn) -> List[dict]:
         self._seed_from_legacy_csv(conn)
         rows = conn.execute(
-            f"""SELECT id, fecha, nota, created_at
+            f"""SELECT id, fecha, nota, category, created_at
             FROM {self.TABLE}
             ORDER BY datetime(created_at) DESC, id DESC"""
         ).fetchall()
@@ -97,14 +103,25 @@ class BitacoraRepository:
 
     @_with_table
     def append_entry(
-        self, fecha: str, nota: str, created_at: Optional[str] = None, *, conn
+        self,
+        fecha: str,
+        nota: str,
+        category: str | None = None,
+        created_at: Optional[str] = None,
+        *,
+        conn,
     ) -> Tuple[bool, str]:
         self._seed_from_legacy_csv(conn)
         try:
             conn.execute(
-                f"""INSERT INTO {self.TABLE} (fecha, nota, created_at)
-                VALUES (?, ?, COALESCE(?, datetime('now')))""",
-                ((fecha or "").strip(), (nota or "").strip(), created_at),
+                f"""INSERT INTO {self.TABLE} (fecha, nota, category, created_at)
+                VALUES (?, ?, ?, COALESCE(?, datetime('now')))""",
+                (
+                    (fecha or "").strip(),
+                    (nota or "").strip(),
+                    normalize_category(category, DEFAULT_BITACORA_CATEGORY),
+                    created_at,
+                ),
             )
             return True, ""
         except DatabaseError as exc:

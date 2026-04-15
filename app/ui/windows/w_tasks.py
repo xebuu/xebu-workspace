@@ -1,4 +1,3 @@
-# tabs/w_tasks.py
 from __future__ import annotations
 
 import datetime
@@ -23,11 +22,16 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.core.categories import (
+    CATEGORY_DEFINITIONS,
+    DEFAULT_TASK_CATEGORY,
+    category_label,
+    normalize_category,
+)
 from app.database.archived_tasks_repository import ArchivedTasksRepository
 from app.database.tasks_repository import TasksRepository
 
 
-# ---------------- Widgets ----------------
 class _TaskRow(QFrame):
     def __init__(self, task: dict, on_toggle, on_delete, on_archive, parent=None):
         super().__init__(parent)
@@ -45,7 +49,6 @@ class _TaskRow(QFrame):
         self.lbl.setObjectName("TaskLabel")
         self.lbl.setWordWrap(True)
 
-        # Botón toggle cambia según estado: ✔ para completar, ↩️ para desmarcar
         is_done = task.get("completado", False)
         toggle_text = "↩️" if is_done else "✔"
         self.btn_toggle = QPushButton(toggle_text)
@@ -69,22 +72,21 @@ class _TaskRow(QFrame):
         lay.addWidget(btn_archive)
 
     def update_toggle_button(self):
-        """Actualiza el texto del botón toggle y el label según el estado actual de la tarea"""
         is_done = self.task.get("completado", False)
         self.btn_toggle.setText("↺" if is_done else "✔")
-        # Actualizar también el label para reflejar cambios en la fecha de vencimiento
         self.lbl.setText(self._format_text(self.task))
 
-    def _format_text(self, t: dict) -> str:
-        # texto + (días restantes) + diaria + prioridad en bolitas
-        texto = t.get("tarea", "")
-        done = t.get("completado", False)
-        diaria = t.get("diaria", False)
-        prioridad = (t.get("prioridad") or "media").lower()
-        dl = (t.get("deadline") or "").strip()
+    def _format_text(self, task: dict) -> str:
+        texto = task.get("tarea", "")
+        done = task.get("completado", False)
+        diaria = task.get("diaria", False)
+        prioridad = (task.get("prioridad") or "media").lower()
+        category = normalize_category(task.get("category"), DEFAULT_TASK_CATEGORY)
+        deadline = (task.get("deadline") or "").strip()
 
         estado = "✅" if done else "⏳"
-        dTxt = " (diaria)" if diaria else ""
+        diaria_txt = " (diaria)" if diaria else ""
+        category_txt = f" [{category_label(category)}]"
         if prioridad == "alta":
             icono = "⚪⚪⚪"
         elif prioridad == "baja":
@@ -93,12 +95,10 @@ class _TaskRow(QFrame):
             icono = "⚪⚪"
 
         dias_restantes = ""
-        # Solo mostrar deadline si la tarea NO está completada Y NO es diaria
-        if dl and not done and not diaria:
+        if deadline and not done and not diaria:
             try:
-                fl = datetime.datetime.strptime(dl, "%Y-%m-%d").date()
-                hoy = datetime.date.today()
-                diff = (fl - hoy).days
+                fecha_limite = datetime.datetime.strptime(deadline, "%Y-%m-%d").date()
+                diff = (fecha_limite - datetime.date.today()).days
                 if diff >= 0:
                     dias_restantes = f" ({diff} días restantes)"
                 else:
@@ -106,7 +106,7 @@ class _TaskRow(QFrame):
             except ValueError:
                 dias_restantes = " (fecha inválida)"
 
-        return f"{estado} {texto}{dias_restantes}{dTxt} {icono}"
+        return f"{estado} {texto}{dias_restantes}{diaria_txt}{category_txt} {icono}"
 
 
 class TasksWindow(QMainWindow):
@@ -120,8 +120,6 @@ class TasksWindow(QMainWindow):
 
         self.tasks = self.tasks_repo.list_all()
         self.tasks_repo.reset_daily_if_needed(self.tasks)
-
-        # Mapear tareas a widgets para actualizaciones eficientes
         self.task_widgets = {}
 
         central = QWidget(self)
@@ -130,7 +128,6 @@ class TasksWindow(QMainWindow):
         root.setContentsMargins(16, 16, 16, 16)
         root.setSpacing(12)
 
-        # Top controls
         top = QHBoxLayout()
         top.setSpacing(10)
 
@@ -144,24 +141,27 @@ class TasksWindow(QMainWindow):
         self.cmb_prio = QComboBox()
         self.cmb_prio.addItems(["alta", "media", "baja"])
         self.cmb_prio.setCurrentText("media")
+        self.cmb_category = QComboBox()
+        for key in CATEGORY_DEFINITIONS:
+            self.cmb_category.addItem(category_label(key), key)
+        self.cmb_category.setCurrentIndex(0)
 
-        btn_add = QPushButton("＋ Agregar tarea")
+        btn_add = QPushButton("+ Agregar tarea")
         btn_add.clicked.connect(self._add_task)
 
         top.addWidget(self.edt_new, 2)
         top.addWidget(self.chk_daily)
         top.addWidget(self.edt_deadline)
         top.addWidget(self.cmb_prio)
+        top.addWidget(self.cmb_category)
         top.addWidget(btn_add)
         root.addLayout(top)
 
-        # Split columns (scroll areas)
         cols = QHBoxLayout()
         cols.setSpacing(12)
         self._make_columns(cols)
         root.addLayout(cols, 1)
 
-        # Shortcuts (Ctrl+Enter add)
         act_add = QAction(self)
         act_add.setShortcut(QKeySequence(Qt.CTRL | Qt.Key_Return))
         act_add.triggered.connect(self._add_task)
@@ -169,9 +169,7 @@ class TasksWindow(QMainWindow):
 
         self._render()
 
-    # ---------- UI helpers ----------
     def _make_columns(self, container_layout: QHBoxLayout):
-        # Pendientes
         self.scr_pending = QScrollArea()
         self.scr_pending.setWidgetResizable(True)
         self.wrap_pending = QWidget()
@@ -180,7 +178,6 @@ class TasksWindow(QMainWindow):
         self.v_pending.setSpacing(8)
         self.scr_pending.setWidget(self.wrap_pending)
 
-        # Completadas
         self.scr_done = QScrollArea()
         self.scr_done.setWidgetResizable(True)
         self.wrap_done = QWidget()
@@ -189,17 +186,12 @@ class TasksWindow(QMainWindow):
         self.v_done.setSpacing(8)
         self.scr_done.setWidget(self.wrap_done)
 
-        # Titles
-        t1 = QLabel("⏳ Tareas Pendientes")
-        t1.setObjectName("ColTitle")
-        t2 = QLabel("✅ Tareas Completadas")
-        t2.setObjectName("ColTitle")
-
         left = QVBoxLayout()
-        left.addWidget(t1)
+        left.addWidget(QLabel("⏳ Tareas Pendientes"))
         left.addWidget(self.scr_pending, 1)
+
         right = QVBoxLayout()
-        right.addWidget(t2)
+        right.addWidget(QLabel("✅ Tareas Completadas"))
         right.addWidget(self.scr_done, 1)
 
         container_layout.addLayout(left, 1)
@@ -210,6 +202,7 @@ class TasksWindow(QMainWindow):
         deadline_str = self.edt_deadline.date().toString("yyyy-MM-dd")
         if not text:
             return
+
         new_task = {
             "tarea": text,
             "completado": False,
@@ -217,11 +210,11 @@ class TasksWindow(QMainWindow):
             "ultima_actualizacion": str(datetime.date.today()),
             "deadline": deadline_str,
             "prioridad": (self.cmb_prio.currentText() or "media").lower(),
+            "category": self.cmb_category.currentData() or DEFAULT_TASK_CATEGORY,
         }
         self.tasks.append(new_task)
         self.tasks_repo.save_all(self.tasks)
 
-        # Crear widget para la nueva tarea e insertarlo al principio (índice 0 es después del título)
         row = _TaskRow(
             new_task,
             on_toggle=self._toggle_task,
@@ -229,44 +222,34 @@ class TasksWindow(QMainWindow):
             on_archive=self._archive_task,
         )
         self.task_widgets[id(new_task)] = row
-        # Obtener el índice del stretch y insertar antes de él
         stretch_index = self.v_pending.count() - 1
-        self.v_pending.insertWidget(stretch_index, row)  # Insertar antes del stretch
+        self.v_pending.insertWidget(stretch_index, row)
 
-        # limpiar entradas
         self.edt_new.clear()
         self.edt_deadline.setDate(QDate.currentDate())
         self.cmb_prio.setCurrentText("media")
+        self.cmb_category.setCurrentIndex(0)
         self.chk_daily.setChecked(False)
 
     def _toggle_task(self, task: dict):
         task["completado"] = not task.get("completado", False)
         self.tasks_repo.save_all(self.tasks)
 
-        # Obtener el widget de la tarea
         task_id = id(task)
         if task_id in self.task_widgets:
             row = self.task_widgets[task_id]
-
-            # Actualizar el botón toggle
             row.update_toggle_button()
-
-            # Remover del layout de origen
             if task.get("completado", False):
-                # Mover a completadas (al final, antes del stretch)
                 self.v_pending.removeWidget(row)
                 stretch_index = self.v_done.count() - 1
                 self.v_done.insertWidget(stretch_index, row)
             else:
-                # Mover a pendientes (al final, antes del stretch)
                 self.v_done.removeWidget(row)
                 stretch_index = self.v_pending.count() - 1
                 self.v_pending.insertWidget(stretch_index, row)
 
     def _delete_task(self, task: dict):
         task_id = id(task)
-
-        # Remover widget del layout
         if task_id in self.task_widgets:
             row = self.task_widgets[task_id]
             if task.get("completado", False):
@@ -276,7 +259,6 @@ class TasksWindow(QMainWindow):
             row.setParent(None)
             del self.task_widgets[task_id]
 
-        # Remover de la lista de tareas
         self.tasks = [t for t in self.tasks if t is not task]
         self.tasks_repo.save_all(self.tasks)
 
@@ -287,11 +269,7 @@ class TasksWindow(QMainWindow):
             return
         self._delete_task(task)
 
-    # ---------- Render ----------
     def _render(self):
-        """Renderización inicial: limpia y construye todos los widgets"""
-
-        # limpiar layouts
         def clear_layout(vbox: QVBoxLayout):
             for i in reversed(range(vbox.count())):
                 w = vbox.itemAt(i).widget()
@@ -302,30 +280,27 @@ class TasksWindow(QMainWindow):
         clear_layout(self.v_done)
         self.task_widgets.clear()
 
-        # reconstruir filas y mapear
-        for t in self.tasks:
+        for task in self.tasks:
             row = _TaskRow(
-                t,
+                task,
                 on_toggle=self._toggle_task,
                 on_delete=self._delete_task,
                 on_archive=self._archive_task,
             )
-            self.task_widgets[id(t)] = row
-
-            if t.get("completado", False):
+            self.task_widgets[id(task)] = row
+            if task.get("completado", False):
                 self.v_done.addWidget(row)
             else:
                 self.v_pending.addWidget(row)
 
-        # estirar al final
         self.v_pending.addStretch(1)
         self.v_done.addStretch(1)
 
 
 def run():
     app = QApplication(sys.argv)
-    w = TasksWindow()
-    w.show()
+    window = TasksWindow()
+    window.show()
     sys.exit(app.exec())
 
 
