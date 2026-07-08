@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import shutil
+import webbrowser
+import zipfile
+from datetime import datetime
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QButtonGroup,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -14,7 +21,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.core.helpers import open_resource_target
+from app.core.paths import ensure_app_data_dir
 from app.core.theme import THEME_REGISTRY, theme_manager
+from app.database.bootstrap import initialize_database
 from app.database.settings_repository import SettingsRepository
 
 
@@ -146,7 +156,7 @@ class ConfiguracionTab(QWidget):
         self.export_btn.setSizePolicy(
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
         )
-        self.export_btn.clicked.connect(self._export_data)
+        self.export_btn.clicked.connect(self._export_data_to_zip)
         user_data_layout.addWidget(self.export_btn)
 
         self.view_btn = QPushButton("Ver mis datos")
@@ -154,7 +164,7 @@ class ConfiguracionTab(QWidget):
         self.view_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.view_btn.setMaximumWidth(220)
         self.view_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.view_btn.clicked.connect(self._view_data)
+        self.view_btn.clicked.connect(self._open_data_folder)
         user_data_layout.addWidget(self.view_btn)
 
         self.delete_btn = QPushButton("Eliminar mis datos")
@@ -164,7 +174,7 @@ class ConfiguracionTab(QWidget):
         self.delete_btn.setSizePolicy(
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
         )
-        self.delete_btn.clicked.connect(self._delete_data)
+        self.delete_btn.clicked.connect(self._delete_local_data)
         user_data_layout.addWidget(self.delete_btn)
 
         user_data_layout_outer.addLayout(user_data_layout)
@@ -173,6 +183,108 @@ class ConfiguracionTab(QWidget):
         root.addStretch()
 
         self._apply_button_styles()
+
+    def _export_data_to_zip(self):
+        data_dir = ensure_app_data_dir()
+        default_name = f"xebu-workspace-data-{datetime.now():%Y%m%d-%H%M%S}.zip"
+        default_path = str(Path.home() / default_name)
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Exportar Datos",
+            default_path,
+            "Archivo ZIP (*.zip)",
+        )
+        if not file_path:
+            return
+
+        export_path = Path(file_path)
+        if export_path.suffix.lower() != ".zip":
+            export_path = export_path.with_suffix(".zip")
+
+        try:
+            self._write_data_export(data_dir, export_path)
+        except OSError as exc:
+            QMessageBox.critical(
+                self,
+                "Exportar Datos",
+                f"No se pudo exportar la carpeta de datos:\n{exc}",
+            )
+            return
+
+        QMessageBox.information(
+            self,
+            "Exportar Datos",
+            f"Datos exportados correctamente en:\n{export_path}",
+        )
+        self.hint_label.setText("Datos exportados correctamente.")
+
+    def _open_data_folder(self):
+        data_dir = ensure_app_data_dir()
+        try:
+            open_resource_target(str(data_dir))
+        except (OSError, webbrowser.Error) as exc:
+            QMessageBox.warning(self, "Ver Datos", f"No se pudo abrir la carpeta:\n{exc}")
+
+    def _delete_local_data(self):
+        data_dir = ensure_app_data_dir()
+        reply = QMessageBox.question(
+            self,
+            "Eliminar Datos",
+            (
+                "Esto eliminara todos los datos locales de XebuWorkspace.\n\n"
+                f"Carpeta:\n{data_dir}\n\n"
+                "Esta accion no se puede deshacer. Se recomienda exportar "
+                "una copia antes de continuar.\n\n"
+                "Deseas continuar?"
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        errors = self._clear_data_dir(data_dir)
+        if errors:
+            QMessageBox.warning(
+                self,
+                "Eliminar Datos",
+                "Algunos archivos no pudieron eliminarse:\n" + "\n".join(errors[:5]),
+            )
+            return
+
+        initialize_database()
+        QMessageBox.information(
+            self,
+            "Eliminar Datos",
+            "Datos eliminados. Se preparo una base de datos vacia para continuar.",
+        )
+        self.hint_label.setText(
+            "Datos eliminados. Reinicia la app para refrescar vistas abiertas."
+        )
+
+    def _write_data_export(self, data_dir: Path, export_path: Path) -> None:
+        export_path.parent.mkdir(parents=True, exist_ok=True)
+        resolved_export = export_path.resolve()
+        with zipfile.ZipFile(export_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for path in sorted(data_dir.rglob("*")):
+                if not path.is_file():
+                    continue
+                if path.resolve() == resolved_export:
+                    continue
+                zf.write(path, path.relative_to(data_dir))
+
+    def _clear_data_dir(self, data_dir: Path) -> list[str]:
+        data_dir.mkdir(parents=True, exist_ok=True)
+        errors: list[str] = []
+        for child in data_dir.iterdir():
+            try:
+                if child.is_dir():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink()
+            except OSError as exc:
+                errors.append(f"{child}: {exc}")
+        return errors
 
     def _make_color_dot(self, theme_name: str, color_hex: str) -> QToolButton:
         btn = QToolButton(self)
