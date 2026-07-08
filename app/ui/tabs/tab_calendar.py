@@ -1,19 +1,19 @@
-# app/tabs/tab_calendar.py
 from __future__ import annotations
 
-from PySide6.QtCore import QDate, Qt
-from PySide6.QtGui import QColor, QTextCharFormat
+from datetime import date, timedelta
+
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QCalendarWidget,
-    QFrame,
-    QHBoxLayout,
-    QLabel,
-    QMainWindow,
     QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
     QLineEdit,
+    QMainWindow,
     QMessageBox,
     QPushButton,
     QScrollArea,
@@ -21,246 +21,330 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.core.task_helpers import (
+    create_task,
+    delete_task_by_id,
+    normalize_priority,
+    tasks_for_deadline,
+    today_iso,
+    update_task_by_id,
+)
 from app.database.tasks_repository import TasksRepository
-from app.core.theme import theme_manager
+
+
+WEEKDAY_LABELS = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"]
+
+
+def _month_label(value: date) -> str:
+    return value.strftime("%B %Y").capitalize()
+
+
+def _task_line(task: dict) -> str:
+    prefix = "[x]" if task.get("completado") else "[ ]"
+    priority = normalize_priority(task.get("prioridad"))
+    suffix = "" if priority == "media" else f" | {priority}"
+    daily = " | diaria" if task.get("diaria") else ""
+    return f"{prefix} {task.get('tarea', 'Sin titulo')}{suffix}{daily}"
+
+
+class _DayCell(QFrame):
+    def __init__(
+        self,
+        day: date,
+        visible_month: int,
+        selected: date,
+        tasks: list[dict],
+        on_select,
+        parent=None,
+    ):
+        super().__init__(parent)
+        self.day = day
+        self.on_select = on_select
+        is_today = day == date.today()
+        is_selected = day == selected
+        in_month = day.month == visible_month
+        border = "#6cc1ff" if is_selected else ("#4D8F71" if is_today else "#3a3a3a")
+        background = "#253532" if in_month else "#1f1f1f"
+        if is_selected:
+            background = "#203f4f"
+        self.setObjectName("CalendarDayCell")
+        self.setMinimumHeight(118)
+        self.setFrameStyle(QFrame.Box | QFrame.Plain)
+        self.setCursor(Qt.PointingHandCursor)
+        self.setStyleSheet(f"""
+            QFrame#CalendarDayCell {{
+                background: {background};
+                border: 1px solid {border};
+                border-radius: 8px;
+            }}
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 7, 8, 7)
+        layout.setSpacing(4)
+
+        number = QLabel(str(day.day))
+        number.setStyleSheet(
+            "font-weight: 800; color: #EFEDE1;" if in_month else "color: #777;"
+        )
+        layout.addWidget(number)
+
+        pending_tasks = [task for task in tasks if not task.get("completado")]
+        for task in pending_tasks[:3]:
+            title = str(task.get("tarea") or "Sin titulo")
+            display_title = title if len(title) <= 28 else title[:27].rstrip() + "..."
+            chip = QLabel(display_title)
+            chip.setWordWrap(False)
+            chip.setStyleSheet("""
+                QLabel {
+                    background: #1d2927;
+                    color: #EFEDE1;
+                    border-radius: 5px;
+                    padding: 3px 5px;
+                    font-size: 11px;
+                }
+            """)
+            chip.setToolTip(_task_line(task))
+            layout.addWidget(chip)
+
+        if len(pending_tasks) > 3:
+            more = QLabel(f"+{len(pending_tasks) - 3} mas")
+            more.setStyleSheet("color: #9fcad5; font-size: 11px; font-weight: 700;")
+            layout.addWidget(more)
+
+        layout.addStretch(1)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.on_select(self.day)
+        super().mousePressEvent(event)
 
 
 class CalendarTab(QMainWindow):
-    """Calendar Tab for viewing and managing tasks by date."""
+    tasks_changed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Calendario")
         self.resize(1000, 640)
-
-        # Initialize database
         self.tasks_repo = TasksRepository()
-        self.tasks_repo.reset_daily_if_needed(self.tasks_repo.list_all())
-        self.selected_date = QDate.currentDate()
+        self.tasks: list[dict] = []
+        self.selected_date = date.today()
+        self.visible_month = self.selected_date.replace(day=1)
 
-        # Setup central widget and main layout
         central = QWidget()
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
         root.setContentsMargins(16, 16, 16, 16)
         root.setSpacing(10)
 
-        # Title
         title = QLabel("Calendario")
         title.setObjectName("Title")
         root.addWidget(title)
 
-        # Main content area with calendar and tasks section
+        nav = QHBoxLayout()
+        self.btn_prev = QPushButton("<")
+        self.btn_prev.setFixedWidth(44)
+        self.btn_prev.clicked.connect(lambda: self._change_month(-1))
+        self.month_title = QLabel("")
+        self.month_title.setStyleSheet("font-size: 16px; font-weight: 800;")
+        self.btn_today = QPushButton("Hoy")
+        self.btn_today.clicked.connect(self._go_today)
+        self.btn_next = QPushButton(">")
+        self.btn_next.setFixedWidth(44)
+        self.btn_next.clicked.connect(lambda: self._change_month(1))
+        nav.addWidget(self.btn_prev)
+        nav.addWidget(self.month_title)
+        nav.addStretch()
+        nav.addWidget(self.btn_today)
+        nav.addWidget(self.btn_next)
+        root.addLayout(nav)
+
         content = QHBoxLayout()
         content.setSpacing(16)
-
-        # Left side: Calendar widget
-        self._setup_calendar_section(content)
-
-        # Right side: Tasks section
-        self._setup_tasks_section(content)
-
         root.addLayout(content, 1)
 
-    def _setup_calendar_section(self, parent_layout: QHBoxLayout):
-        """Setup the interactive calendar widget."""
-        calendar_frame = QFrame()
-        calendar_frame.setObjectName("CalendarFrame")
-        calendar_frame.setFrameStyle(QFrame.Box | QFrame.Sunken)
-        calendar_layout = QVBoxLayout(calendar_frame)
-        calendar_layout.setContentsMargins(8, 8, 8, 8)
+        month_frame = QFrame()
+        month_frame.setObjectName("CalendarMonthFrame")
+        month_frame.setFrameStyle(QFrame.Box | QFrame.Plain)
+        month_layout = QVBoxLayout(month_frame)
+        month_layout.setContentsMargins(8, 8, 8, 8)
+        month_layout.setSpacing(8)
+        weekday_row = QGridLayout()
+        for col, label in enumerate(WEEKDAY_LABELS):
+            weekday = QLabel(label)
+            weekday.setAlignment(Qt.AlignCenter)
+            weekday.setStyleSheet("color: #a7a7a7; font-weight: 800;")
+            weekday_row.addWidget(weekday, 0, col)
+        month_layout.addLayout(weekday_row)
+        self.month_grid = QGridLayout()
+        self.month_grid.setHorizontalSpacing(6)
+        self.month_grid.setVerticalSpacing(6)
+        month_layout.addLayout(self.month_grid, 1)
+        content.addWidget(month_frame, 3)
 
-        # Create the calendar widget
-        self.calendar = QCalendarWidget()
-        self.calendar.setGridVisible(True)
-        self.calendar.setSelectedDate(QDate.currentDate())
-        self.calendar.clicked.connect(self._on_date_selected)
-        theme_manager.theme_changed.connect(self._apply_calendar_theme)
-        self._apply_calendar_theme()
-
-        calendar_layout.addWidget(self.calendar)
-        parent_layout.addWidget(calendar_frame, 1)
-
-        # Mark dates with tasks
-        self._update_calendar_indicators()
-
-    def _setup_tasks_section(self, parent_layout: QHBoxLayout):
-        """Setup the tasks management section."""
-        tasks_frame = QFrame()
-        tasks_frame.setObjectName("TasksFrame")
-        tasks_frame.setFrameStyle(QFrame.Box | QFrame.Sunken)
-        tasks_layout = QVBoxLayout(tasks_frame)
-        tasks_layout.setContentsMargins(8, 8, 8, 8)
-
-        # Section header with selected date
-        self.tasks_header = QLabel("Tareas del día")
+        agenda_frame = QFrame()
+        agenda_frame.setObjectName("CalendarAgendaFrame")
+        agenda_frame.setFrameStyle(QFrame.Box | QFrame.Plain)
+        agenda_layout = QVBoxLayout(agenda_frame)
+        agenda_layout.setContentsMargins(10, 10, 10, 10)
+        agenda_layout.setSpacing(8)
+        self.tasks_header = QLabel("")
         self.tasks_header.setObjectName("SectionHeader")
-        tasks_layout.addWidget(self.tasks_header)
-
-        # Scroll area for tasks list
+        self.tasks_header.setStyleSheet("font-weight: 800;")
+        agenda_layout.addWidget(self.tasks_header)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setObjectName("TasksScrollArea")
-
         self.tasks_container = QWidget()
         self.tasks_list_layout = QVBoxLayout(self.tasks_container)
         self.tasks_list_layout.setContentsMargins(0, 0, 0, 0)
         self.tasks_list_layout.setSpacing(6)
-
         scroll.setWidget(self.tasks_container)
-        tasks_layout.addWidget(scroll, 1)
+        agenda_layout.addWidget(scroll, 1)
+        agenda_frame.setMinimumWidth(320)
+        content.addWidget(agenda_frame, 1)
 
-        tasks_frame.setMinimumWidth(300)
-        parent_layout.addWidget(tasks_frame, 1)
+        self.refresh()
 
-        # Load initial tasks for today
-        self._on_date_selected(self.selected_date)
+    def refresh(self) -> None:
+        self.tasks = self.tasks_repo.list_all()
+        self.tasks_repo.reset_daily_if_needed(self.tasks)
+        self._render_month()
+        self._render_agenda()
 
-    def _on_date_selected(self, date: QDate):
-        """Handle calendar date selection and load tasks for that date."""
-        self.selected_date = date
-        selected_date_str = date.toString("yyyy-MM-dd")
+    def _change_month(self, delta: int) -> None:
+        month = self.visible_month.month + delta
+        year = self.visible_month.year
+        while month < 1:
+            month += 12
+            year -= 1
+        while month > 12:
+            month -= 12
+            year += 1
+        self.visible_month = date(year, month, 1)
+        self._render_month()
 
-        # Update header
-        formatted_date = date.toString("dddd, d 'de' MMMM 'de' yyyy")
-        self.tasks_header.setText(f"Tareas del día • {formatted_date}")
+    def _go_today(self) -> None:
+        self.selected_date = date.today()
+        self.visible_month = self.selected_date.replace(day=1)
+        self.refresh()
 
-        # Load all tasks
-        all_tasks = self.tasks_repo.list_all()
+    def _select_date(self, selected: date) -> None:
+        self.selected_date = selected
+        if (
+            selected.month != self.visible_month.month
+            or selected.year != self.visible_month.year
+        ):
+            self.visible_month = selected.replace(day=1)
+        self._render_month()
+        self._render_agenda()
 
-        # Filter tasks by deadline matching the selected date
-        tasks_for_date = [
-            t for t in all_tasks if t.get("deadline", "").strip() == selected_date_str
-        ]
-
-        # Clear existing task widgets
-        while self.tasks_list_layout.count():
-            widget = self.tasks_list_layout.takeAt(0).widget()
+    def _render_month(self) -> None:
+        self.month_title.setText(_month_label(self.visible_month))
+        while self.month_grid.count():
+            item = self.month_grid.takeAt(0)
+            widget = item.widget()
             if widget:
                 widget.deleteLater()
 
-        # Display tasks for the selected date
-        if not tasks_for_date:
-            placeholder = QLabel("No hay tareas para este día")
-            placeholder.setAlignment(Qt.AlignCenter)
-            placeholder.setStyleSheet("color: #888; font-style: italic;")
-            self.tasks_list_layout.addWidget(placeholder)
+        first_weekday = self.visible_month.weekday()
+        first_cell = self.visible_month - timedelta(days=first_weekday)
+        for row in range(6):
+            for col in range(7):
+                current_day = first_cell + timedelta(days=row * 7 + col)
+                tasks = tasks_for_deadline(self.tasks, str(current_day))
+                cell = _DayCell(
+                    current_day,
+                    self.visible_month.month,
+                    self.selected_date,
+                    tasks,
+                    self._select_date,
+                    self,
+                )
+                self.month_grid.addWidget(cell, row, col)
+
+    def _render_agenda(self) -> None:
+        self.tasks_header.setText(
+            f"Tareas del dia | {self.selected_date.strftime('%Y-%m-%d')}"
+        )
+        while self.tasks_list_layout.count():
+            item = self.tasks_list_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+        tasks = tasks_for_deadline(self.tasks, str(self.selected_date))
+        if not tasks:
+            empty = QLabel("No hay tareas para este dia")
+            empty.setAlignment(Qt.AlignCenter)
+            empty.setStyleSheet("color: #888; font-style: italic;")
+            self.tasks_list_layout.addWidget(empty)
         else:
-            for task in tasks_for_date:
-                task_widget = self._create_task_widget(task)
-                self.tasks_list_layout.addWidget(task_widget)
+            for task in tasks:
+                self.tasks_list_layout.addWidget(self._create_task_widget(task))
 
-        # Add "Add Task" button at the end
-        add_task_button = self._create_add_task_button()
-        self.tasks_list_layout.addWidget(add_task_button)
-
-        self.tasks_list_layout.addStretch()
+        self.tasks_list_layout.addWidget(self._create_add_task_button())
+        self.tasks_list_layout.addStretch(1)
 
     def _create_task_widget(self, task: dict) -> QFrame:
-        """Create a widget to display a single task."""
         frame = QFrame()
         frame.setObjectName("TaskItemFrame")
         frame.setFrameStyle(QFrame.Box | QFrame.Plain)
         frame.setLineWidth(1)
-
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(4)
 
-        # Task text and status
-        task_text = task.get("tarea", "Sin descripción")
-        is_done = task.get("completado", False)
-        is_daily = task.get("diaria", False)
-        priority = (task.get("prioridad") or "media").lower()
-
-        # Format task display
-        status_icon = "✅" if is_done else "⏳"
-        daily_tag = " (diaria)" if is_daily else ""
-        priority_icon = (
-            "⚪⚪⚪" if priority == "alta" else ("⚪" if priority == "baja" else "⚪⚪")
-        )
-
-        task_label = QLabel(f"{status_icon} {task_text}{daily_tag} {priority_icon}")
+        task_label = QLabel(_task_line(task))
         task_label.setWordWrap(True)
         layout.addWidget(task_label)
 
-        # Button row
         btn_layout = QHBoxLayout()
         btn_layout.setContentsMargins(0, 0, 0, 0)
         btn_layout.setSpacing(4)
 
-        # Toggle completion button
-        toggle_text = "↩️ Deshacer" if is_done else "✔️ Completar"
+        toggle_text = "Deshacer" if task.get("completado") else "Completar"
         btn_toggle = QPushButton(toggle_text)
-        btn_toggle.setMaximumWidth(100)
         btn_toggle.clicked.connect(lambda: self._toggle_task(task))
         btn_layout.addWidget(btn_toggle)
 
-        # Delete button
-        btn_delete = QPushButton("🗑️")
-        btn_delete.setMaximumWidth(40)
-        btn_delete.setToolTip("Eliminar tarea")
-        btn_delete.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                border: none;
-                color: #666;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #ffebee;
-                color: #d32f2f;
-            }
-        """)
+        btn_delete = QPushButton("Borrar")
         btn_delete.clicked.connect(lambda: self._delete_task(task))
         btn_layout.addWidget(btn_delete)
-
         btn_layout.addStretch()
         layout.addLayout(btn_layout)
-
         return frame
 
-    def _toggle_task(self, task: dict):
-        """Toggle task completion status."""
-        task["completado"] = not task.get("completado", False)
+    def _toggle_task(self, task: dict) -> None:
+        if update_task_by_id(
+            self.tasks,
+            task,
+            completado=not task.get("completado", False),
+            ultima_actualizacion=today_iso(date.today()),
+        ):
+            self.tasks_repo.save_all(self.tasks)
+            self.refresh()
+            self.tasks_changed.emit()
 
-        all_tasks = self.tasks_repo.list_all()
-        for t in all_tasks:
-            if t.get("tarea") == task.get("tarea"):
-                t["completado"] = task["completado"]
-
-        self.tasks_repo.save_all(all_tasks)
-        self._on_date_selected(self.selected_date)
-        self._update_calendar_indicators()
-
-    def _delete_task(self, task: dict):
-        """Delete a task from the database."""
-
-        # Confirm deletion
+    def _delete_task(self, task: dict) -> None:
         reply = QMessageBox.question(
             self,
             "Eliminar Tarea",
-            f"¿Estás seguro de que quieres eliminar la tarea:\n\n\"{task.get('tarea', 'Sin descripción')}\"?",
+            f"Eliminar la tarea:\n\n\"{task.get('tarea', 'Sin titulo')}\"?",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
-
-        if reply == QMessageBox.Yes:
-            # Remove task from database
-            all_tasks = self.tasks_repo.list_all()
-            all_tasks = [t for t in all_tasks if t.get("tarea") != task.get("tarea")]
-            self.tasks_repo.save_all(all_tasks)
-
-            # Refresh UI
-            self._on_date_selected(self.selected_date)
-            self._update_calendar_indicators()
+        if reply == QMessageBox.Yes and delete_task_by_id(self.tasks, task):
+            self.tasks_repo.save_all(self.tasks)
+            self.refresh()
+            self.tasks_changed.emit()
 
     def _create_add_task_button(self) -> QFrame:
-        """Create an elegant add task button that looks like a task item."""
         frame = QFrame()
         frame.setObjectName("AddTaskButtonFrame")
         frame.setFrameStyle(QFrame.Box | QFrame.Plain)
         frame.setLineWidth(1)
+        frame.setCursor(Qt.PointingHandCursor)
         frame.setStyleSheet("""
             QFrame#AddTaskButtonFrame {
                 border-style: dashed;
@@ -268,53 +352,39 @@ class CalendarTab(QMainWindow):
                 background-color: transparent;
             }
             QFrame#AddTaskButtonFrame:hover {
-                background-color: #f0f0f0;
+                background-color: #343434;
             }
         """)
-
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(4)
-
-        # Add task label
-        add_label = QLabel("➕ Agregar tarea")
-        add_label.setStyleSheet("color: #666; font-weight: bold;")
+        add_label = QLabel("+ Agregar tarea")
+        add_label.setStyleSheet("color: #bfc8c8; font-weight: bold;")
         layout.addWidget(add_label)
-
-        # Make the entire frame clickable
         frame.mousePressEvent = lambda event: self._show_add_task_dialog()
-
         return frame
 
-    def _show_add_task_dialog(self):
-        """Show dialog to add a new task for the selected date."""
+    def _show_add_task_dialog(self) -> None:
         dialog = QDialog(self)
         dialog.setWindowTitle("Agregar Nueva Tarea")
         dialog.setModal(True)
-        dialog.resize(400, 200)
-
+        dialog.resize(420, 220)
         layout = QVBoxLayout(dialog)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(12)
 
-        # Task description
         task_edit = QLineEdit()
-        task_edit.setPlaceholderText("Descripción de la tarea...")
-        layout.addWidget(QLabel("Tarea:"))
-        layout.addWidget(task_edit)
-
-        # Priority selector
+        task_edit.setPlaceholderText("Descripcion de la tarea...")
         priority_combo = QComboBox()
         priority_combo.addItems(["baja", "media", "alta"])
         priority_combo.setCurrentText("media")
+        daily_check = QCheckBox("Tarea diaria")
+
+        layout.addWidget(QLabel("Tarea:"))
+        layout.addWidget(task_edit)
         layout.addWidget(QLabel("Prioridad:"))
         layout.addWidget(priority_combo)
-
-        # Daily task checkbox
-        daily_check = QCheckBox("Tarea diaria (se reinicia automáticamente)")
         layout.addWidget(daily_check)
 
-        # Buttons
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(
             lambda: self._add_task_and_close(
@@ -323,77 +393,24 @@ class CalendarTab(QMainWindow):
         )
         buttons.rejected.connect(dialog.reject)
         layout.addWidget(buttons)
-
         dialog.exec()
 
-    def _add_task_and_close(self, dialog, task_edit, priority_combo, daily_check):
-        """Add the task and close the dialog."""
+    def _add_task_and_close(self, dialog, task_edit, priority_combo, daily_check) -> None:
         task_text = task_edit.text().strip()
         if not task_text:
             QMessageBox.warning(
-                dialog, "Error", "Por favor ingresa una descripción para la tarea."
+                dialog, "Error", "Por favor ingresa una descripcion para la tarea."
             )
             return
-
-        # Create new task
-        new_task = {
-            "tarea": task_text,
-            "completado": False,
-            "diaria": daily_check.isChecked(),
-            "deadline": self.selected_date.toString("yyyy-MM-dd"),
-            "prioridad": priority_combo.currentText(),
-            "ultima_actualizacion": self.selected_date.toString("yyyy-MM-dd"),
-        }
-
-        # Add to database
-        all_tasks = self.tasks_repo.list_all()
-        all_tasks.append(new_task)
-        self.tasks_repo.save_all(all_tasks)
-
-        # Refresh UI
-        self._on_date_selected(self.selected_date)
-        self._update_calendar_indicators()
-
-        dialog.accept()
-
-    def _update_calendar_indicators(self):
-        """Mark dates with tasks using subtle visual indicators on the calendar."""
-        # Load all tasks from database
-        all_tasks = self.tasks_repo.list_all()
-
-        # Extract unique deadline dates
-        task_dates = set()
-        for task in all_tasks:
-            deadline = task.get("deadline", "").strip()
-            if deadline:
-                date = QDate.fromString(deadline, "yyyy-MM-dd")
-                if date.isValid():
-                    task_dates.add(deadline)
-
-        # Create format for dates with tasks - subtle blue text
-        task_format = QTextCharFormat()
-        task_format.setForeground(QColor(72, 149, 239))  # Blue text
-        task_format.setFontWeight(700)  # Bold
-
-        # Apply format to dates with tasks
-        for date_str in task_dates:
-            date = QDate.fromString(date_str, "yyyy-MM-dd")
-            if date.isValid():
-                self.calendar.setDateTextFormat(date, task_format)
-
-    def _apply_calendar_theme(self, _theme_name: str | None = None):
-        """Apply themed colors to the navigation bar of the calendar."""
-        nav_bg = theme_manager.get_color("calendar", "nav_bar_bg")
-        nav_text = theme_manager.get_color(
-            "calendar", "nav_bar_text", fallback="#ffffff"
+        self.tasks.append(
+            create_task(
+                task_text,
+                deadline=str(self.selected_date),
+                prioridad=priority_combo.currentText(),
+                diaria=daily_check.isChecked(),
+            )
         )
-        style = f"""
-            QCalendarWidget QWidget#qt_calendar_navigationbar {{
-                background-color: {nav_bg};
-            }}
-            QCalendarWidget QWidget#qt_calendar_navigationbar QToolButton {{
-                color: {nav_text};
-                border: none;
-            }}
-        """
-        self.calendar.setStyleSheet(style)
+        self.tasks_repo.save_all(self.tasks)
+        self.refresh()
+        self.tasks_changed.emit()
+        dialog.accept()

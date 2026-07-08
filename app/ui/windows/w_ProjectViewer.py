@@ -5,7 +5,6 @@ import os
 import shutil
 import subprocess
 import sys
-import uuid
 import webbrowser
 from datetime import datetime
 from pathlib import Path
@@ -36,6 +35,7 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
+from app.core.task_helpers import create_task, delete_task_by_id
 from app.database.tasks_repository import TasksRepository
 
 if TYPE_CHECKING:
@@ -575,15 +575,7 @@ class ProjectViewWindow(QMainWindow):
         text = self.task_input.text().strip()
         if not text:
             return
-        new_task = {
-            "id": str(uuid.uuid4()),
-            "tarea": text,
-            "completado": False,
-            "diaria": False,
-            "ultima_actualizacion": str(datetime.now().date()),
-            "deadline": "",
-            "prioridad": "media",
-        }
+        new_task = create_task(text, today=datetime.now().date())
         self.tasks.append(new_task)
         self.tasks_repo.save_all(self.tasks)
         self.task_input.clear()
@@ -617,7 +609,7 @@ class ProjectViewWindow(QMainWindow):
         self._render_tasks()
 
     def _delete_task(self, task: dict):
-        self.tasks = [t for t in self.tasks if t.get("id") != task.get("id")]
+        delete_task_by_id(self.tasks, task)
         self.tasks_repo.save_all(self.tasks)
         self._render_tasks()
 

@@ -45,6 +45,8 @@ app/.appdata/
 TODO.md
 ideas.txt
 tests/
+!tests/
+!tests/**/*.py
 notes/
 
 *.db
