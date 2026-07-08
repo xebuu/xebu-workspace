@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -12,6 +13,10 @@ ORG_NAME = "Xebu"
 def _resolve_app_data_dir() -> Path:
     """Return the AppData folder where user data should live."""
     loc = QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)
+    if os.name == "nt" and loc and "PythonSoftwareFoundation.Python" in loc:
+        user_profile = os.environ.get("USERPROFILE")
+        if user_profile:
+            return Path(user_profile) / "AppData" / "Roaming" / ORG_NAME / APP_NAME
     base = Path(loc) if loc else (Path.home() / f".{APP_NAME.lower()}")
     return base / ORG_NAME / APP_NAME
 
