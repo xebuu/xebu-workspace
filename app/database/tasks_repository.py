@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
-import uuid
 from datetime import date as date_cls
 from typing import Callable, List
 
+from app.core.task_helpers import normalize_task
 from app.database.connection import connection_context
 from app.database.schema import create_tasks_table
 
@@ -22,28 +22,38 @@ class TasksRepository:
     TABLE = "tasks"
 
     def _serialize(self, task: dict) -> str:
-        if "id" not in task:
-            task = dict(task)
-            task["id"] = str(uuid.uuid4())
-        return json.dumps(task, ensure_ascii=False, separators=(",", ":"))
+        return json.dumps(normalize_task(task), ensure_ascii=False, separators=(",", ":"))
 
     def _deserialize(self, payload: str) -> dict:
         return json.loads(payload)
 
-    @_with_tasks_table
-    def list_all(self, *, conn) -> List[dict]:
-        rows = conn.execute(f"SELECT payload FROM {self.TABLE}").fetchall()
-        return [self._deserialize(row[0]) for row in rows]
-
-    @_with_tasks_table
-    def save_all(self, tasks: List[dict], *, conn) -> None:
+    def _save_all(self, tasks: List[dict], *, conn) -> None:
+        normalized_tasks = [normalize_task(task) for task in tasks]
         conn.execute(f"DELETE FROM {self.TABLE}")
         entries = [
-            (task.get("id") or str(uuid.uuid4()), self._serialize(task)) for task in tasks
+            (task["id"], self._serialize(task)) for task in normalized_tasks
         ]
         conn.executemany(
             f"INSERT INTO {self.TABLE} (id, payload) VALUES (?, ?)", entries
         )
+
+    @_with_tasks_table
+    def list_all(self, *, conn) -> List[dict]:
+        rows = conn.execute(f"SELECT payload FROM {self.TABLE}").fetchall()
+        tasks = []
+        changed = False
+        for row in rows:
+            task = self._deserialize(row[0])
+            if not task.get("id"):
+                changed = True
+            tasks.append(normalize_task(task))
+        if changed:
+            self._save_all(tasks, conn=conn)
+        return tasks
+
+    @_with_tasks_table
+    def save_all(self, tasks: List[dict], *, conn) -> None:
+        self._save_all(tasks, conn=conn)
 
     def reset_daily_if_needed(self, tasks: List[dict], today=None) -> bool:
         hoy = today or date_cls.today()

@@ -4,7 +4,7 @@ from __future__ import annotations
 import datetime
 import sys
 
-from PySide6.QtCore import QDate, Qt
+from PySide6.QtCore import QDate, Qt, Signal
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.core.task_helpers import create_task, delete_task_by_id
 from app.database.archived_tasks_repository import ArchivedTasksRepository
 from app.database.tasks_repository import TasksRepository
 
@@ -110,6 +111,8 @@ class _TaskRow(QFrame):
 
 
 class TasksWindow(QMainWindow):
+    tasks_changed = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("📋 Gestor de Tareas")
@@ -136,6 +139,7 @@ class TasksWindow(QMainWindow):
 
         self.edt_new = QLineEdit()
         self.edt_new.setPlaceholderText("Escribe una nueva tarea")
+        self.edt_new.returnPressed.connect(self._add_task)
         self.chk_daily = QCheckBox("Tarea diaria 🕓")
         self.edt_deadline = QDateEdit()
         self.edt_deadline.setDisplayFormat("yyyy-MM-dd")
@@ -210,16 +214,15 @@ class TasksWindow(QMainWindow):
         deadline_str = self.edt_deadline.date().toString("yyyy-MM-dd")
         if not text:
             return
-        new_task = {
-            "tarea": text,
-            "completado": False,
-            "diaria": bool(self.chk_daily.isChecked()),
-            "ultima_actualizacion": str(datetime.date.today()),
-            "deadline": deadline_str,
-            "prioridad": (self.cmb_prio.currentText() or "media").lower(),
-        }
+        new_task = create_task(
+            text,
+            deadline=deadline_str,
+            prioridad=(self.cmb_prio.currentText() or "media").lower(),
+            diaria=bool(self.chk_daily.isChecked()),
+        )
         self.tasks.append(new_task)
         self.tasks_repo.save_all(self.tasks)
+        self.tasks_changed.emit()
 
         # Crear widget para la nueva tarea e insertarlo al principio (índice 0 es después del título)
         row = _TaskRow(
@@ -242,6 +245,7 @@ class TasksWindow(QMainWindow):
     def _toggle_task(self, task: dict):
         task["completado"] = not task.get("completado", False)
         self.tasks_repo.save_all(self.tasks)
+        self.tasks_changed.emit()
 
         # Obtener el widget de la tarea
         task_id = id(task)
@@ -277,8 +281,9 @@ class TasksWindow(QMainWindow):
             del self.task_widgets[task_id]
 
         # Remover de la lista de tareas
-        self.tasks = [t for t in self.tasks if t is not task]
+        delete_task_by_id(self.tasks, task)
         self.tasks_repo.save_all(self.tasks)
+        self.tasks_changed.emit()
 
     def _archive_task(self, task: dict):
         ok, err = self.arch_repo.append_task(task)
