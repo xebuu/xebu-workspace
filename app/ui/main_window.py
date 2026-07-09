@@ -39,6 +39,7 @@ from app.ui.tabs.tab_projects import ProjectManagerTab
 from app.database.toolbar_repository import ToolbarRepository
 from app.core.helpers import open_resource_target
 from app.core.paths import assets_path
+from app.core.theme import theme_manager
 from app.ui.widgets.overlay_sidebar import COLLAPSED_WIDTH, OverlaySidebar
 from app.ui.windows.w_bitacora import BitacoraWindow
 from app.ui.windows.w_notifications import NotificationDialog
@@ -176,6 +177,7 @@ class MainWindow(QMainWindow):
         self.show_tab(0)
 
         QShortcut(QKeySequence("Ctrl+R"), self, activated=self.apply_style)
+        theme_manager.theme_changed.connect(lambda _: self.apply_style())
 
         self.apply_style()
 
@@ -498,7 +500,10 @@ class MainWindow(QMainWindow):
 
     def apply_style(self):
         with open(assets_path, "r", encoding="utf-8") as f:
-            self.setStyleSheet(f.read())
+            stylesheet = f.read()
+        for token, value in theme_manager.stylesheet_tokens().items():
+            stylesheet = stylesheet.replace(f"@{token}@", value)
+        self.setStyleSheet(stylesheet)
         return
 
     def tab_temporal(self, title="Coming Soon"):

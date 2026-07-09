@@ -23,7 +23,6 @@ class NewProjectWindow(QDialog):
         self.setWindowTitle("Nuevo proyecto")
         self.setModal(True)
         self.resize(720, 320)
-        self.setStyleSheet("QDialog { background: #1E1E1E; }")
 
         self.proc = existing or ProcessDef(
             id=str(uuid.uuid4()),
@@ -38,8 +37,6 @@ class NewProjectWindow(QDialog):
         root = QVBoxLayout(self)
         root.setContentsMargins(16, 8, 16, 8)
         root.setSpacing(8)
-
-        self.setStyleSheet("QDialog { background:#2d2d2d; } QLabel { color:#EFEDE1; }")
 
         title = QLabel("Nuevo proyecto")
         title.setObjectName("RunTitle")

@@ -29,6 +29,7 @@ from app.core.task_helpers import (
     today_iso,
     update_task_by_id,
 )
+from app.core.theme import theme_manager
 from app.database.tasks_repository import TasksRepository
 
 
@@ -63,10 +64,16 @@ class _DayCell(QFrame):
         is_today = day == date.today()
         is_selected = day == selected
         in_month = day.month == visible_month
-        border = "#6cc1ff" if is_selected else ("#4D8F71" if is_today else "#3a3a3a")
-        background = "#253532" if in_month else "#1f1f1f"
+        border = theme_manager.get_color("border", "subtle")
+        if is_today:
+            border = theme_manager.get_color("calendar", "today_border")
         if is_selected:
-            background = "#203f4f"
+            border = theme_manager.get_color("accent", "normal")
+        background = theme_manager.get_color("surface", "base")
+        if not in_month:
+            background = theme_manager.get_color("surface", "sunken")
+        if is_selected:
+            background = theme_manager.get_color("calendar", "selected_bg")
         self.setObjectName("CalendarDayCell")
         self.setMinimumHeight(118)
         self.setFrameStyle(QFrame.Box | QFrame.Plain)
@@ -85,7 +92,9 @@ class _DayCell(QFrame):
 
         number = QLabel(str(day.day))
         number.setStyleSheet(
-            "font-weight: 800; color: #EFEDE1;" if in_month else "color: #777;"
+            "font-weight: 800;"
+            if in_month
+            else f"color: {theme_manager.get_color('text', 'muted')};"
         )
         layout.addWidget(number)
 
@@ -94,22 +103,14 @@ class _DayCell(QFrame):
             title = str(task.get("tarea") or "Sin titulo")
             display_title = title if len(title) <= 28 else title[:27].rstrip() + "..."
             chip = QLabel(display_title)
+            chip.setObjectName("CalendarChip")
             chip.setWordWrap(False)
-            chip.setStyleSheet("""
-                QLabel {
-                    background: #1d2927;
-                    color: #EFEDE1;
-                    border-radius: 5px;
-                    padding: 3px 5px;
-                    font-size: 11px;
-                }
-            """)
             chip.setToolTip(_task_line(task))
             layout.addWidget(chip)
 
         if len(pending_tasks) > 3:
             more = QLabel(f"+{len(pending_tasks) - 3} mas")
-            more.setStyleSheet("color: #9fcad5; font-size: 11px; font-weight: 700;")
+            more.setObjectName("CardMeta")
             layout.addWidget(more)
 
         layout.addStretch(1)
@@ -174,7 +175,7 @@ class CalendarTab(QMainWindow):
         for col, label in enumerate(WEEKDAY_LABELS):
             weekday = QLabel(label)
             weekday.setAlignment(Qt.AlignCenter)
-            weekday.setStyleSheet("color: #a7a7a7; font-weight: 800;")
+            weekday.setObjectName("CardMeta")
             weekday_row.addWidget(weekday, 0, col)
         month_layout.addLayout(weekday_row)
         self.month_grid = QGridLayout()
@@ -191,7 +192,6 @@ class CalendarTab(QMainWindow):
         agenda_layout.setSpacing(8)
         self.tasks_header = QLabel("")
         self.tasks_header.setObjectName("SectionHeader")
-        self.tasks_header.setStyleSheet("font-weight: 800;")
         agenda_layout.addWidget(self.tasks_header)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -277,7 +277,7 @@ class CalendarTab(QMainWindow):
         if not tasks:
             empty = QLabel("No hay tareas para este dia")
             empty.setAlignment(Qt.AlignCenter)
-            empty.setStyleSheet("color: #888; font-style: italic;")
+            empty.setObjectName("CardMeta")
             self.tasks_list_layout.addWidget(empty)
         else:
             for task in tasks:
@@ -345,20 +345,10 @@ class CalendarTab(QMainWindow):
         frame.setFrameStyle(QFrame.Box | QFrame.Plain)
         frame.setLineWidth(1)
         frame.setCursor(Qt.PointingHandCursor)
-        frame.setStyleSheet("""
-            QFrame#AddTaskButtonFrame {
-                border-style: dashed;
-                border-color: #aaa;
-                background-color: transparent;
-            }
-            QFrame#AddTaskButtonFrame:hover {
-                background-color: #343434;
-            }
-        """)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(10, 8, 10, 8)
         add_label = QLabel("+ Agregar tarea")
-        add_label.setStyleSheet("color: #bfc8c8; font-weight: bold;")
+        add_label.setObjectName("CardMeta")
         layout.addWidget(add_label)
         frame.mousePressEvent = lambda event: self._show_add_task_dialog()
         return frame

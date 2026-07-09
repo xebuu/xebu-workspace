@@ -47,7 +47,7 @@ class NotificationDialog(QDialog):
         root.addWidget(title)
 
         self.summary = QLabel("")
-        self.summary.setStyleSheet("color: #a7a7a7;")
+        self.summary.setObjectName("CardMeta")
         root.addWidget(self.summary)
 
         scroll = QScrollArea()
@@ -87,24 +87,17 @@ class NotificationDialog(QDialog):
     def _add_section(self, title: str, tasks: list[dict]) -> None:
         frame = QFrame()
         frame.setObjectName("NotificationSection")
-        frame.setStyleSheet("""
-            QFrame#NotificationSection {
-                background: #242424;
-                border: 1px solid #3a3a3a;
-                border-radius: 8px;
-            }
-        """)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
 
         label = QLabel(f"{title} ({len(tasks)})")
-        label.setStyleSheet("font-weight: 800;")
+        label.setObjectName("SectionHeading")
         layout.addWidget(label)
 
         if not tasks:
             empty = QLabel("Sin pendientes.")
-            empty.setStyleSheet("color: #888; font-style: italic;")
+            empty.setObjectName("CardMeta")
             layout.addWidget(empty)
         else:
             for task in tasks:

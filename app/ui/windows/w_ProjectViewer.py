@@ -91,7 +91,6 @@ class ProjectViewWindow(QMainWindow):
         root = QHBoxLayout(central)
         root.setContentsMargins(12, 12, 12, 12)
         root.setSpacing(10)
-        central.setStyleSheet("QWidget#ProjectViewerBackground { background:#1E1E1E; }")
 
         # ==== Left: Description + scripts + output ====
         left = QVBoxLayout()
@@ -100,9 +99,6 @@ class ProjectViewWindow(QMainWindow):
         desc_container.setObjectName("DescContainer")
         desc_container.setFrameShape(QFrame.StyledPanel)
         desc_container.setFrameShadow(QFrame.Raised)
-        desc_container.setStyleSheet(
-            "QFrame#DescContainer { background:#2d2d2d; border-radius:12px; border:1px solid #4A4A4A; }"
-        )
         desc_layout = QVBoxLayout(desc_container)
         desc_layout.setContentsMargins(12, 12, 12, 12)
         desc_layout.setSpacing(8)
@@ -179,9 +175,6 @@ class ProjectViewWindow(QMainWindow):
         task_container.setObjectName("TaskContainer")
         task_container.setFrameShape(QFrame.StyledPanel)
         task_container.setFrameShadow(QFrame.Raised)
-        task_container.setStyleSheet(
-            "QFrame#TaskContainer { background:#2e2e2e ; border-radius:12px; border:1px solid #4A4A4A; }"
-        )
         container_layout = QVBoxLayout(task_container)
         container_layout.setContentsMargins(12, 12, 12, 12)
         container_layout.setSpacing(8)
@@ -766,9 +759,6 @@ class _MiniTaskRow(QFrame):
         self.setObjectName("TaskRowMini")
         self.setFrameShape(QFrame.StyledPanel)
         self.setFrameShadow(QFrame.Raised)
-        self.setStyleSheet(
-            "QFrame#TaskRowMini { background:#2d2d2d; border-radius:8px; border:1px solid transparent; }"
-        )
         lay = QHBoxLayout(self)
         lay.setContentsMargins(8, 6, 8, 6)
         lay.setSpacing(6)

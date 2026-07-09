@@ -7,8 +7,10 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QButtonGroup,
+    QColorDialog,
     QFileDialog,
     QFrame,
     QHBoxLayout,
@@ -40,7 +42,6 @@ class ConfiguracionTab(QWidget):
 
         title = QLabel("Configuración")
         title.setObjectName("Title")
-        title.setStyleSheet("font-size: 24px; letter-spacing: 0.5px;")
         root.addWidget(title)
 
         appearance_frame = QFrame()
@@ -53,9 +54,6 @@ class ConfiguracionTab(QWidget):
 
         appearance_title = QLabel("Apariencia")
         appearance_title.setObjectName("SectionHeading")
-        appearance_title.setStyleSheet(
-            "font-size: 16px; font-weight: 700; letter-spacing: 0.2px;"
-        )
         appearance_layout.addWidget(appearance_title)
 
         color_label = QLabel("Color de resaltado")
@@ -74,41 +72,33 @@ class ConfiguracionTab(QWidget):
         self.selected_theme_name = (
             stored_theme if stored_theme in THEME_REGISTRY else "Pink"
         )
+        is_custom_theme = bool(stored_theme and stored_theme.startswith("Custom:"))
 
         for name, palette in THEME_REGISTRY.items():
             btn = self._make_color_dot(name, palette["accent"]["normal"])
             self.group.addButton(btn)
             self._buttons[name] = btn
             color_row.addWidget(btn)
-            if name == self.selected_theme_name:
+            if not is_custom_theme and name == self.selected_theme_name:
                 btn.setChecked(True)
 
         appearance_layout.addLayout(color_row)
         self.group.buttonToggled.connect(self._on_theme_toggled)
 
-        mode_label = QLabel("Modo de visualización")
-        mode_label.setObjectName("SectionHint")
-        mode_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        appearance_layout.addWidget(mode_label)
-
-        mode_row = QHBoxLayout()
-        mode_row.setSpacing(0)
-        mode_row.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        self.mode_group = QButtonGroup(self)
-        self.mode_group.setExclusive(True)
-        self._mode_buttons: dict[str, QToolButton] = {}
-        self.selected_mode = "Dark"
-
-        for mode in ("Dark", "Light"):
-            btn = self._make_mode_button(mode)
-            self.mode_group.addButton(btn)
-            self._mode_buttons[mode] = btn
-            mode_row.addWidget(btn)
-            if mode == self.selected_mode:
-                btn.setChecked(True)
-
-        appearance_layout.addLayout(mode_row)
-        self.mode_group.buttonToggled.connect(self._on_mode_toggled)
+        custom_row = QHBoxLayout()
+        custom_row.setSpacing(10)
+        custom_row.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.custom_color_swatch = QFrame()
+        self.custom_color_swatch.setObjectName("AccentSwatch")
+        self.custom_color_swatch.setFixedSize(28, 28)
+        self.custom_color_btn = QPushButton("Elegir color personalizado")
+        self.custom_color_btn.setObjectName("AccentPickerBtn")
+        self.custom_color_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.custom_color_btn.clicked.connect(self._choose_custom_accent)
+        custom_row.addWidget(self.custom_color_swatch)
+        custom_row.addWidget(self.custom_color_btn)
+        appearance_layout.addLayout(custom_row)
+        self._update_custom_swatch()
 
         self.save_btn = QPushButton("Guardar")
         self.save_btn.setObjectName("SaveBtn")
@@ -122,11 +112,10 @@ class ConfiguracionTab(QWidget):
         appearance_layout.addLayout(save_row)
 
         self.hint_label = QLabel(
-            "Selecciona un color y guarda para aplicar los cambios."
+            "Selecciona un color para aplicarlo al instante."
         )
         self.hint_label.setObjectName("HintLabel")
         self.hint_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-        self.hint_label.setStyleSheet("color: #8cbfdd; font-weight: 600;")
         appearance_layout.addWidget(self.hint_label)
 
         root.addWidget(appearance_frame)
@@ -141,9 +130,6 @@ class ConfiguracionTab(QWidget):
 
         user_data_title = QLabel("Datos de usuario")
         user_data_title.setObjectName("SectionHeading")
-        user_data_title.setStyleSheet(
-            "font-size: 16px; font-weight: 700; letter-spacing: 0.2px;"
-        )
         user_data_layout_outer.addWidget(user_data_title)
 
         user_data_layout = QVBoxLayout()
@@ -168,7 +154,7 @@ class ConfiguracionTab(QWidget):
         user_data_layout.addWidget(self.view_btn)
 
         self.delete_btn = QPushButton("Eliminar mis datos")
-        self.delete_btn.setObjectName("UserDataBtn")
+        self.delete_btn.setObjectName("DeleteDataBtn")
         self.delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.delete_btn.setMaximumWidth(220)
         self.delete_btn.setSizePolicy(
@@ -296,10 +282,10 @@ class ConfiguracionTab(QWidget):
             QToolButton#ThemeDot {{
                 background-color: {color_hex};
                 border-radius: 19px;
-                border: 2px solid rgba(255, 255, 255, 0.35);
+                border: 2px solid #596767;
             }}
             QToolButton#ThemeDot:hover {{
-                border-color: rgba(255, 255, 255, 0.65);
+                border-color: #f2f0e8;
             }}
             QToolButton#ThemeDot:checked {{
                 border: 3px solid #ffffff;
@@ -308,84 +294,38 @@ class ConfiguracionTab(QWidget):
         btn.setToolTip(theme_name)
         return btn
 
-    def _make_mode_button(self, mode_name: str) -> QToolButton:
-        btn = QToolButton(self)
-        btn.setCheckable(True)
-        btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn.setFixedSize(100, 34)
-        btn.setObjectName("ModeBtn")
-        btn.setText(mode_name)
-        btn.setStyleSheet("""
-            QToolButton#ModeBtn {
-                border: 1px solid #4b4b4b;
-                background: transparent;
-                color: #c9c9c9;
-                font-weight: 600;
-            }
-            QToolButton#ModeBtn:first-of-type {
-                border-top-left-radius: 8px;
-                border-bottom-left-radius: 8px;
-            }
-            QToolButton#ModeBtn:last-of-type {
-                border-top-right-radius: 8px;
-                border-bottom-right-radius: 8px;
-                border-left: none;
-            }
-            QToolButton#ModeBtn:checked {
-                background: #2b2b2b;
-                border-color: #6cc1ff;
-                color: #ffffff;
-            }
-            """)
-        return btn
+    def _clear_preset_selection(self) -> None:
+        self.group.setExclusive(False)
+        for btn in self._buttons.values():
+            btn.setChecked(False)
+        self.group.setExclusive(True)
+
+    def _update_custom_swatch(self) -> None:
+        color = theme_manager.current_accent
+        self.custom_color_swatch.setStyleSheet(f"""
+            QFrame#AccentSwatch {{
+                background: {color};
+                border: 1px solid #596767;
+                border-radius: 6px;
+            }}
+        """)
+
+    def _choose_custom_accent(self) -> None:
+        color = QColorDialog.getColor(
+            QColor(theme_manager.current_accent),
+            self,
+            "Elegir color de resaltado",
+        )
+        if not color.isValid():
+            return
+        theme_manager.set_custom_accent(color.name())
+        self.settings_repo.upsert("theme", theme_manager.serialize_current_theme())
+        self._clear_preset_selection()
+        self._update_custom_swatch()
+        self.hint_label.setText("Color personalizado aplicado.")
 
     def _apply_button_styles(self):
-        self.save_btn.setStyleSheet("""
-            QPushButton#SaveBtn {
-                background: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0, stop:0 #5b8be8, stop:1 #3c71d5);
-                color: white;
-                border: none;
-                border-radius: 10px;
-                letter-spacing: 0.4px;
-                font-weight: 700;
-                padding: 10px 28px;
-            }
-            QPushButton#SaveBtn:hover {
-                opacity: 0.9;
-            }
-            """)
-
-        secondary_style = """
-            QPushButton#UserDataBtn {
-                border: 1px solid #3c3c3c;
-                border-radius: 8px;
-                background: #1d1d1d;
-                color: #cfcfcf;
-                padding: 8px 14px;
-                text-align: left;
-                font-weight: 600;
-            }
-            QPushButton#UserDataBtn:hover {
-                border-color: #5f5f5f;
-            }
-        """
-
-        for btn in (self.export_btn, self.view_btn):
-            btn.setStyleSheet(secondary_style)
-
-        self.delete_btn.setStyleSheet("""
-            QPushButton#UserDataBtn {
-                border: 1px solid #8b3a3a;
-                border-radius: 8px;
-                background: #2b1a1a;
-                color: #f7b0b0;
-                padding: 8px 14px;
-                font-weight: 600;
-            }
-            QPushButton#UserDataBtn:hover {
-                background: #391e1e;
-            }
-            """)
+        return
 
     def _on_theme_toggled(self, button: QToolButton, checked: bool):
         if not checked:
@@ -394,15 +334,8 @@ class ConfiguracionTab(QWidget):
             if btn is button:
                 self.selected_theme_name = name
                 theme_manager.set_theme(name)
-                self.settings_repo.upsert("theme", name)
-                break
-
-    def _on_mode_toggled(self, button: QToolButton, checked: bool):
-        if not checked:
-            return
-        for name, btn in self._mode_buttons.items():
-            if btn is button:
-                self.selected_mode = name
+                self.settings_repo.upsert("theme", theme_manager.serialize_current_theme())
+                self._update_custom_swatch()
                 break
 
     def _save(self):

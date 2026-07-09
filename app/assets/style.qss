@@ -1,349 +1,348 @@
-/* ===========================
-   GENERAL BUTTONS
-=========================== */
+/* XebuWorkspace visual system.
+   Tokens are replaced by MainWindow.apply_style(). */
 
-QMainWindow {background: #2d2d2d;}
-
-QWidget#ProjectViewerBackground {
-
-    background: #2d2d2d;
+QMainWindow,
+QDialog,
+QStackedWidget {
+    background: @app_background@;
 }
 
-QTextEdit {
-    background: #1E1E1E;
-    color: #EFEDE1;
-    padding: 6px 8px;
-}
-
-
-QPushButton {
-    color: #fff;
-    background: #2d2d2d;
-    border: 0.5px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    text-align: left;
-    font-weight: bold;
+QWidget {
+    color: @text_primary@;
     font-size: 12px;
 }
 
-QPushButton:hover {
-    background: #565555;
+QStatusBar,
+QMenuBar,
+QMenu {
+    background: @surface_sunken@;
+    color: @text_secondary@;
+    border: none;
 }
 
-QPushButton:checked {
-    background: #383838;
+QMenu::item:selected {
+    background: @surface_hover@;
 }
 
-
-/* ===========================
-   TOGGLE BUTTON
-=========================== */
-
-#ToggleBtn {
-    font-weight: bold;
-    background: #2d2d2d;
-    color: #fff;
+QToolBar {
+    background: @surface_sunken@;
+    border: none;
+    border-bottom: 1px solid @border_subtle@;
+    spacing: 6px;
+    padding: 6px;
 }
 
-
-/* ===========================
-   STATUS BAR
-=========================== */
-
-QStatusBar {
-    background: #2d2d2d;
-    color: #EFEDE1;
+QLabel {
+    color: @text_primary@;
+    font-weight: 600;
 }
-
-
-/* ===========================
-   STACKED WIDGET
-=========================== */
-
-QStackedWidget {
-    background: #2d2d2d;
-}
-
-
-/* ===========================
-   SIDEBAR
-=========================== */
-
-#SideBar {
-    background: #565555;
-    border-right: 8px solid #EFEDE1;
-}
-
-
-/* ===========================
-   TITLES & LABELS
-=========================== */
 
 QLabel#Title {
-    color: #EFEDE1;
-    font-size: 20px;
+    color: @text_primary@;
+    font-size: 22px;
+    font-weight: 800;
+}
+
+QLabel#RunTitle,
+QLabel#SectionHeader,
+QLabel#SectionHeading,
+QLabel#ColTitle {
+    color: @text_primary@;
+    font-size: 16px;
     font-weight: 800;
 }
 
 QLabel#CardTitle {
-    color: #EFEDE1;
+    color: @text_primary@;
     font-size: 15px;
-    font-weight: 700;
-}
-
-QLabel#CardMeta {
-    color: #bfc8c8;
-    font-size: 12px;
-}
-
-QLabel#RunTitle {
-    color: #EFEDE1;
-    font-size: 18px;
     font-weight: 800;
 }
 
-QLabel {
-    color: #EFEDE1;
-    font-weight: 600;
+QLabel#CardMeta,
+QLabel#SectionHint,
+QLabel#HintLabel {
+    color: @text_muted@;
+    font-size: 12px;
 }
 
-
-/* ===========================
-   CARD FRAMES
-=========================== */
-
-QFrame#Card {
-    background: #253532;
-    border: 1px solid #253532;
-    border-radius: 12px;
-}
-
-QFrame#Card:hover {
-    background: #2e4541;
-    border: 1px solid #2e4541;
-}
-
-
-/* ===========================
-   SPECIAL BUTTONS
-=========================== */
-
-QPushButton#Open {
+QPushButton,
+QToolButton {
+    background: @surface_raised@;
+    color: @text_primary@;
+    border: 1px solid @border_normal@;
     border-radius: 8px;
-    padding: 6px 12px;
-    font-weight: 600;
-    background: #253532;
-    color: white;
-    border: 1px solid #253532;
+    padding: 8px 12px;
+    font-weight: 700;
+    text-align: center;
 }
 
-QPushButton#Open:hover {
-    background: #1d4ed8;
+QPushButton:hover,
+QToolButton:hover {
+    background: @surface_hover@;
+    border-color: @border_strong@;
 }
 
-QPushButton#Edit {
-    background: #253532;
-    color: #f3f4f6;
-    border: 1px solid #253532;
+QPushButton:pressed,
+QToolButton:pressed,
+QPushButton:checked,
+QToolButton:checked {
+    background: @accent_muted@;
+    border-color: @accent_normal@;
+    color: @text_primary@;
 }
 
-QPushButton#Edit:hover {
-    background: #818b9b;
-}
-
-QPushButton#Delete {
-    background: #253532;
-    color: white;
-    border: 1px solid #253532;
-}
-
-QPushButton#Delete:hover {
-    background: #ff4e4e;
-}
-
+QPushButton#SaveBtn,
+QPushButton#AccentPickerBtn,
+QPushButton#Open,
 QPushButton#Run {
-    background: #2563eb;
-    color: white;
-    border: 1px solid #1d4ed8;
+    background: @accent_normal@;
+    color: @accent_text@;
+    border-color: @accent_checked@;
 }
 
+QPushButton#SaveBtn:hover,
+QPushButton#AccentPickerBtn:hover,
+QPushButton#Open:hover,
 QPushButton#Run:hover {
-    background: #1d4ed8;
+    background: @accent_hover@;
+}
+
+QPushButton#Delete,
+QPushButton#BtnDel {
+    background: @state_danger@;
+    color: #ffffff;
+    border-color: @state_danger@;
 }
 
 QPushButton#BtnOk {
-    background:#2563eb; border:1px solid #1d4ed8; color:white;
-    font-weight:800;
+    background: @state_success@;
+    color: @text_inverse@;
+    border-color: @state_success@;
 }
-QPushButton#BtnOk:hover { background:#1d4ed8; }
-QPushButton#BtnDel {
-    background:#b45353; border:1px solid #9f3939; color:#ffefef; font-weight:800;
-}
-QPushButton#BtnDel:hover { background:#a84444; }
+
 QPushButton#BtnArc {
-    background:#6EB4C0; border:1px solid #4f99a6; color:#0b2226; font-weight:800;
-}
-QPushButton#BtnArc:hover { background:#52C5DA; }
-
-
-/* ===========================
-   DIALOGS & INPUTS
-=========================== */
-
-QDialog {
-    background: #1b2224;
+    background: @state_info@;
+    color: @text_inverse@;
+    border-color: @state_info@;
 }
 
+QLineEdit,
+QTextEdit,
+QDateEdit,
+QComboBox,
 QListWidget {
-    background: #1D2927;
-    color: #EFEDE1;
-    border: 1px solid #2e3b3f;
+    background: @surface_sunken@;
+    color: @text_primary@;
+    border: 1px solid @border_normal@;
     border-radius: 8px;
-    padding: 6px 8px;
+    padding: 7px 10px;
+    selection-background-color: @accent_muted@;
+    selection-color: @text_primary@;
 }
 
-QListWidget::item:selected {
-    background: #3a4a47;
-    border-radius: 6px;
+QLineEdit:hover,
+QTextEdit:hover,
+QDateEdit:hover,
+QComboBox:hover {
+    border-color: @border_strong@;
 }
 
-QListWidget::item:hover {
-    background: #3b5f4d;
-    border-radius: 6px;
+QLineEdit:focus,
+QTextEdit:focus,
+QDateEdit:focus,
+QComboBox:focus {
+    border-color: @accent_normal@;
+    background: @surface_base@;
 }
 
-
-QCheckBox { color: #EFEDE1; }
-QWidget#TaskRow {
-    background:#253532; border:1px solid #2e3b3f; border-radius:10px;
-}
-QLabel#TaskLabel { color:#EFEDE1; }
-
-/* ===========================
-   DEADLINE DATE EDIT
-=========================== */
-
-QDateEdit {
-    background: #1D2927;
-    color: #EFEDE1;
-    border: 1px solid #2e3b3f;
-    border-radius: 8px;
-    padding: 6px 8px;
-    min-width: 120px;
+QCheckBox {
+    color: @text_secondary@;
+    spacing: 8px;
 }
 
-/* Cuando está en foco */
-QDateEdit:focus {
-    border: 1px solid #2563eb;
-}
-
-/* ===========================
-   DEADLINE CALENDAR POPUP
-=========================== */
-
-QCalendarWidget QWidget#qt_calendar_navigationbar {
-    background: #253532;   /* VERDE OSCURO */
-    border-bottom: 1px solid #2e3b3f;}
-
-/* Texto del nombre del mes */
-QCalendarWidget QToolButton {
+QScrollArea {
     background: transparent;
-    color: #EFEDE1;  
-    font-weight: 700;
-    border: none;}
-
-QLineEdit {
-    background-color: #242424;     
-    color: #e6e6e6;              
-    border: 1px solid #3f3f3f;     
-    border-radius: 12px;
-    padding: 6px 12px;
-    selection-background-color: #3a3a3a;
+    border: none;
 }
 
-QLineEdit:hover {
-    border: 1px solid #505050;
+QScrollBar:vertical,
+QScrollBar:horizontal {
+    background: @surface_sunken@;
+    border: none;
+    margin: 0px;
 }
 
-QLineEdit:focus {
-    border: 1px solid #fff;
-    background-color: #2a2a2a;
+QScrollBar::handle:vertical,
+QScrollBar::handle:horizontal {
+    background: @border_strong@;
+    border-radius: 4px;
+    min-height: 28px;
+    min-width: 28px;
 }
 
-/* ===========================
-   CONFIGURACION TAB
-=========================== */
-
-QLabel#ThemeTitle {
-    font-weight: 700;
-    font-size: 14px;
+QScrollBar::handle:hover {
+    background: @accent_muted@;
 }
 
-QPushButton#SaveBtn {
-    border-radius: 10px;
-    font-weight: 700;
-    padding: 8px 14px;
-    background: #2d2d2d;
-    color: #ffffff;
+QScrollBar::add-line,
+QScrollBar::sub-line,
+QScrollBar::add-page,
+QScrollBar::sub-page {
+    background: transparent;
+    border: none;
 }
 
-QPushButton#SaveBtn:hover {
-    background: #3a3a3a;
+/* Sidebar */
+
+QFrame#OverlaySidebar {
+    background: @surface_sunken@;
+    border-right: 1px solid @border_subtle@;
 }
 
-QLabel#HintLabel {
-    color: #9a9a9a;
+QPushButton#SidebarButton {
+    background: transparent;
+    color: @text_muted@;
+    border: 1px solid transparent;
+    border-radius: 8px;
+}
+
+QPushButton#SidebarButton:hover {
+    background: @surface_hover@;
+    color: @text_primary@;
+}
+
+QPushButton#SidebarButton[selected="true"] {
+    background: @accent_muted@;
+    color: @text_primary@;
+    border-color: @accent_normal@;
+}
+
+/* Cards and panels */
+
+QFrame#Card,
+QFrame#DashboardSection,
+QFrame#CalendarMonthFrame,
+QFrame#CalendarAgendaFrame,
+QFrame#NotificationSection,
+QFrame#AppearanceFrame,
+QFrame#UserDataFrame,
+QFrame#TaskContainer,
+QFrame#DescContainer,
+QFrame#CosmeticFrame {
+    background: @surface_base@;
+    border: 1px solid @border_subtle@;
+    border-radius: 8px;
+}
+
+QFrame#Card:hover {
+    background: @surface_hover@;
+    border-color: @accent_muted@;
+}
+
+QFrame#DashboardTaskRow,
+QFrame#TaskRow,
+QFrame#TaskRowMini,
+QFrame#TaskItemFrame {
+    background: @surface_raised@;
+    border: 1px solid @border_subtle@;
+    border-radius: 8px;
+}
+
+QFrame#DashboardTaskRow:hover,
+QFrame#TaskRow:hover,
+QFrame#TaskRowMini:hover,
+QFrame#TaskItemFrame:hover {
+    border-color: @accent_muted@;
+}
+
+QFrame#QuickAddFrame {
+    background: @surface_raised@;
+    border: 1px solid @accent_muted@;
+    border-radius: 8px;
+}
+
+QLabel#TaskLabel {
+    color: @text_primary@;
+}
+
+/* Calendar */
+
+QFrame#CalendarDayCell {
+    background: @surface_base@;
+    border: 1px solid @border_subtle@;
+    border-radius: 8px;
+}
+
+QLabel#CalendarChip {
+    background: @calendar_chip_bg@;
+    color: @text_primary@;
+    border-radius: 5px;
+    padding: 3px 5px;
     font-size: 11px;
 }
 
-QToolButton#ModeBtn {
+QFrame#AddTaskButtonFrame {
+    border: 1px dashed @border_strong@;
+    background: transparent;
     border-radius: 8px;
-    font-weight: 600;
-    background: #2d2d2d;
-    color: #ffffff;
-    border: 2px solid transparent;
 }
 
-QToolButton#ModeBtn:hover {
-    border: 2px solid rgba(255, 255, 255, 0.3);
+QFrame#AddTaskButtonFrame:hover {
+    background: @surface_hover@;
+    border-color: @accent_normal@;
 }
 
-QToolButton#ModeBtn:checked {
-    background: #3a3a3a;
-    border: 2px solid #ffffff;
+/* Configuracion */
+
+QToolButton#ThemeDot {
+    border-radius: 19px;
+    border: 2px solid @border_strong@;
 }
 
-QLabel#UserDataTitle {
-    font-weight: 700;
-    font-size: 14px;
+QToolButton#ThemeDot:hover {
+    border-color: @text_primary@;
+}
+
+QToolButton#ThemeDot:checked {
+    border: 3px solid @text_primary@;
+}
+
+QFrame#AccentSwatch {
+    border: 1px solid @border_strong@;
+    border-radius: 6px;
 }
 
 QPushButton#UserDataBtn {
-    border-radius: 6px;
-    font-weight: 500;
-    padding: 6px 12px;
-    background: #363636;
-    color: #ffffff;
+    background: @surface_raised@;
+    color: @text_secondary@;
+    border-color: @border_normal@;
     text-align: left;
 }
 
 QPushButton#UserDataBtn:hover {
-    background: #404040;
+    background: @surface_hover@;
+    color: @text_primary@;
 }
 
-QPushButton#UserDataBtn:pressed {
-    background: #2a2a2a;
+QPushButton#DeleteDataBtn {
+    background: @surface_raised@;
+    color: @state_danger@;
+    border-color: @state_danger@;
+    text-align: left;
 }
 
-QFrame#CosmeticFrame {
-    border: 1px solid #555555;
-    border-radius: 8px;
-    background: #2a2a2a;
+QPushButton#DeleteDataBtn:hover {
+    background: @state_danger@;
+    color: #ffffff;
 }
 
-QFrame#UserDataFrame {
-    border: 1px solid #555555;
-    border-radius: 8px;
-    background: #2a2a2a;
+/* Project viewer */
+
+QWidget#ProjectViewerBackground {
+    background: @app_background@;
+}
+
+QToolBar#ProjectViewerToolbar {
+    background: @surface_sunken@;
+    border-bottom: 1px solid @border_subtle@;
 }
